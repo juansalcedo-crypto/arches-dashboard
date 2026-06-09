@@ -169,12 +169,32 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
   <div id="page-assign" class="page">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="card">
-        <div class="card-head"><span class="card-title">📋 Assign Project to Person</span></div>
-        <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
-          <div><label class="flbl">Person</label><select class="fsel" id="ap-person" style="width:100%"><option value="">Select person…</option></select></div>
-          <div><label class="flbl">Project Name</label><input class="finp" id="ap-project" placeholder="e.g. advancy_us_specialty_plant"/></div>
-          <div><label class="flbl">Priority</label><select class="fsel" id="ap-prio" style="width:100%"><option value="P1">P1 — Highest</option><option value="P2" selected>P2 — Medium</option><option value="P3">P3 — Normal</option></select></div>
-          <button class="btn btn-org" onclick="assignProject()" style="align-self:flex-start">✅ Assign — Appears in tracker immediately</button>
+        <div class="card-head"><span class="card-title">📋 Assign Project</span><span style="font-size:9px;color:rgba(255,255,255,0.35)">Select multiple people</span></div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
+          <!-- People multi-select -->
+          <div>
+            <label class="flbl">People <span style="color:rgba(255,255,255,0.3);font-weight:400">(click to select/deselect)</span></label>
+            <div style="display:flex;gap:6px;margin-bottom:8px">
+              <button onclick="selectAllPeople()" class="btn btn-ghost btn-sm">Select All</button>
+              <button onclick="selectTeamPeople('luis')" class="btn btn-ghost btn-sm" style="color:#F7A200;border-color:rgba(247,162,0,0.3)">🟠 All Luis</button>
+              <button onclick="selectTeamPeople('taiki')" class="btn btn-ghost btn-sm" style="color:#3B82F6;border-color:rgba(59,130,246,0.3)">🔵 All Taiki</button>
+              <button onclick="clearPeople()" class="btn btn-ghost btn-sm">Clear</button>
+            </div>
+            <div id="people-selector" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+          </div>
+          <!-- Project + Priority -->
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
+            <div><label class="flbl">Project Name</label><input class="finp" id="ap-project" placeholder="e.g. advancy_us_specialty_plant"/></div>
+            <div><label class="flbl">Priority</label>
+              <select class="fsel" id="ap-prio">
+                <option value="P1">P1</option>
+                <option value="P2" selected>P2</option>
+                <option value="P3">P3</option>
+              </select>
+            </div>
+          </div>
+          <div id="assign-preview" style="display:none;background:rgba(247,162,0,0.08);border:1px solid rgba(247,162,0,0.2);border-radius:8px;padding:10px;font-size:11px;color:rgba(255,255,255,0.6)"></div>
+          <button class="btn btn-org" onclick="assignProject()" id="btn-assign" disabled style="opacity:0.5">✅ Assign to Selected People</button>
         </div>
       </div>
       <div class="card">
@@ -299,6 +319,7 @@ function showApp(){
   document.getElementById("hdr-mgr").textContent=currentManager;
   document.getElementById("hdr-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}).toUpperCase();
   populateSelects();
+  renderPeopleSelector();
   loadToday();
   loadAssigned();
   loadComments();
@@ -503,18 +524,78 @@ async function loadHistory(){
 async function deleteLog(id){if(!confirm("Delete?"))return;await db.from("daily_logs").delete().eq("id",id);showToast("Deleted","info");loadHistory();}
 
 // ── ASSIGN ────────────────────────────────────────────────────────────────────
+let selectedPeople = new Set();
+
+function renderPeopleSelector(){
+  const members = getMembers();
+  const el = document.getElementById("people-selector");
+  if(!el) return;
+  el.innerHTML = Object.entries(members).map(([tid, names])=>
+    names.map(name=>{
+      const team = TEAMS[tid];
+      const sel = selectedPeople.has(name);
+      return `<div onclick="togglePerson('${name}')" id="pp-${name.replace(/\s/g,'_')}"
+        style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid ${sel?team.color+"80":"rgba(255,255,255,0.08)"};background:${sel?team.color+"20":"rgba(255,255,255,0.03)"};transition:all 0.15s;user-select:none">
+        <div style="width:6px;height:6px;border-radius:50%;background:${sel?team.color:"rgba(255,255,255,0.2)"}"></div>
+        <span style="font-size:11px;color:${sel?"#fff":"rgba(255,255,255,0.5)"};font-weight:${sel?700:400}">${name}</span>
+      </div>`;
+    }).join("")
+  ).join("");
+  updateAssignPreview();
+}
+
+function togglePerson(name){
+  if(selectedPeople.has(name)) selectedPeople.delete(name);
+  else selectedPeople.add(name);
+  renderPeopleSelector();
+}
+
+function selectAllPeople(){
+  const m=getMembers();Object.values(m).flat().forEach(n=>selectedPeople.add(n));renderPeopleSelector();
+}
+function selectTeamPeople(tid){
+  const m=getMembers();(m[tid]||[]).forEach(n=>selectedPeople.add(n));renderPeopleSelector();
+}
+function clearPeople(){ selectedPeople.clear(); renderPeopleSelector(); }
+
+function updateAssignPreview(){
+  const project = document.getElementById("ap-project")?.value.trim();
+  const prio = document.getElementById("ap-prio")?.value||"P2";
+  const btn = document.getElementById("btn-assign");
+  const preview = document.getElementById("assign-preview");
+  const count = selectedPeople.size;
+  if(count>0 && project){
+    preview.style.display="block";
+    preview.innerHTML=`📋 Will assign <strong style="color:#F7A200">${project}</strong> [${prio}] to <strong style="color:#F7A200">${count} person(s):</strong> ${[...selectedPeople].join(", ")}`;
+    if(btn){btn.disabled=false;btn.style.opacity="1";}
+  } else {
+    preview.style.display="none";
+    if(btn){btn.disabled=true;btn.style.opacity="0.5";}
+  }
+}
+
 async function assignProject(){
-  const person=document.getElementById("ap-person").value;
   const project=document.getElementById("ap-project").value.trim();
   const prio=document.getElementById("ap-prio").value;
   const today=new Date().toISOString().split("T")[0];
-  if(!person||!project){showToast("⚠️ Fill all fields","error");return;}
-  const{error}=await db.from("assigned_projects").insert({person,project,priority:prio,date:today,assigned_by:currentManager});
+  if(selectedPeople.size===0||!project){showToast("⚠️ Select people and enter project","error");return;}
+  const rows=[...selectedPeople].map(person=>({person,project,priority:prio,date:today,assigned_by:currentManager}));
+  const{error}=await db.from("assigned_projects").insert(rows);
   if(error){showToast("⚠️ Error: "+error.message,"error");return;}
-  showToast(`✅ Assigned to ${person} — appears in their tracker within 60s!`,"success");
+  showToast(`✅ Assigned to ${rows.length} people — appears in their tracker within 60s!`,"success");
   document.getElementById("ap-project").value="";
+  selectedPeople.clear();
+  renderPeopleSelector();
   loadAssigned();
 }
+
+// Update preview when project name or prio changes
+document.addEventListener("DOMContentLoaded",()=>{
+  const projInp = document.getElementById("ap-project");
+  const prioSel = document.getElementById("ap-prio");
+  if(projInp) projInp.addEventListener("input", updateAssignPreview);
+  if(prioSel) prioSel.addEventListener("change", updateAssignPreview);
+});
 
 async function loadAssigned(){
   const today=new Date().toISOString().split("T")[0];
@@ -682,7 +763,7 @@ function showPage(page,btn){
   if(page==="performance")renderPerf();
   if(page==="history"){const today=new Date().toISOString().split("T")[0];document.getElementById("hist-from").value=today;document.getElementById("hist-to").value=today;loadHistory();}
   if(page==="settings"){renderTargetsForm();renderMembersList();renderManagersList();}
-  if(page==="assign"){loadAssigned();loadComments();}
+  if(page==="assign"){loadAssigned();loadComments();renderPeopleSelector();}
 }
 
 function showToast(msg,type="info"){
