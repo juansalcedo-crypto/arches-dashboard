@@ -4,65 +4,73 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Arches Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500;600&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#0D0F1A;--sur:#111320;--bdr:#1E2240;--org:#F7A200;--od:#E07000;--grn:#16A34A;--red:#DC2626;--blu:#3B82F6;}
+:root{
+  --bg:#0A0C14;--sur:#10131F;--sur2:#161A28;--bdr:#1E2235;
+  --org:#F7A200;--od:#E07000;--grn:#22C55E;--red:#EF4444;--ylw:#EAB308;--pur:#8B5CF6;--blu:#3B82F6;
+  --txt:#F1F5F9;--txt2:#94A3B8;--txt3:#475569;
+}
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:100vh;}
-::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:var(--bg)}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-@keyframes live{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}50%{box-shadow:0 0 0 5px rgba(22,163,74,0.25)}}
+body{background:var(--bg);color:var(--txt);font-family:'Inter',sans-serif;font-size:13px;min-height:100vh;-webkit-font-smoothing:antialiased;}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr);border-radius:2px}
+input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes live{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}50%{box-shadow:0 0 0 4px rgba(34,197,94,.2)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-@keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 
 #login{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:200}
-.lbox{background:var(--sur);border:1px solid var(--bdr);border-radius:20px;padding:40px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.6)}
-#hdr{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 2px 20px rgba(0,0,0,0.4)}
-.tab-bar{display:flex;gap:4px;background:rgba(255,255,255,0.04);border-radius:10px;padding:4px}
-.tab{padding:6px 14px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;color:rgba(255,255,255,0.4);transition:all 0.2s;border:none;background:transparent;font-family:'DM Mono',monospace}
-.tab.active{background:var(--org);color:#fff;box-shadow:0 2px 8px rgba(247,162,0,0.4)}
-.tab:hover:not(.active){color:rgba(255,255,255,0.7);background:rgba(255,255,255,0.06)}
-#content{padding:20px;max-width:1400px;margin:0 auto}
-.page{display:none;animation:fadeIn 0.3s ease}.page.active{display:block}
+.lbox{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:36px;max-width:380px;width:90%;box-shadow:0 24px 48px rgba(0,0,0,.5)}
+#hdr{background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 20px;height:54px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;box-shadow:0 1px 0 var(--bdr)}
+.tab-bar{display:flex;gap:3px;background:var(--sur2);border-radius:9px;padding:3px}
+.tab{padding:5px 13px;border-radius:7px;cursor:pointer;font-size:11px;font-weight:600;color:var(--txt2);transition:all .2s;border:none;background:transparent}
+.tab.active{background:var(--org);color:#fff;box-shadow:0 2px 8px rgba(247,162,0,.35)}
+.tab:hover:not(.active){color:var(--txt);background:rgba(255,255,255,.06)}
+#content{padding:18px;max-width:1440px;margin:0 auto}
+.page{display:none;animation:fadeIn .3s ease}.page.active{display:block}
 .card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;overflow:hidden;margin-bottom:14px}
-.card-head{padding:12px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(247,162,0,0.06),transparent)}
-.card-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:#fff}
-.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px}
-.stat-card{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:16px;text-align:center}
-.stat-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:900;color:var(--org);line-height:1}
-.stat-lbl{font-size:9px;color:rgba(255,255,255,0.4);margin-top:4px;letter-spacing:0.8px;text-transform:uppercase}
-.prow{display:grid;align-items:center;gap:10px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s}
-.prow:hover{background:rgba(247,162,0,0.04)}.prow:last-child{border-bottom:none}
-.btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;font-weight:700;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px}
-.btn-org{background:linear-gradient(135deg,var(--org),var(--od));color:#fff;box-shadow:0 3px 10px rgba(247,162,0,0.4)}
+.ch{padding:11px 15px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(247,162,0,.05),transparent)}
+.ct{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:var(--txt)}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+.stat{background:var(--sur);border:1px solid var(--bdr);border-radius:12px;padding:14px;text-align:center}
+.sv{font-family:'Syne',sans-serif;font-size:24px;font-weight:900;color:var(--org);line-height:1}
+.sl{font-size:10px;color:var(--txt3);margin-top:3px;letter-spacing:.5px;text-transform:uppercase}
+.prow{display:grid;align-items:center;gap:10px;padding:9px 15px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s}
+.prow:hover{background:rgba(247,162,0,.04)}.prow:last-child{border-bottom:none}
+.btn{padding:6px 13px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;transition:all .15s;display:inline-flex;align-items:center;gap:4px}
+.btn-org{background:linear-gradient(135deg,var(--org),var(--od));color:#fff;box-shadow:0 3px 10px rgba(247,162,0,.35)}
 .btn-org:hover{transform:translateY(-1px)}
-.btn-ghost{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.6)}
-.btn-ghost:hover{background:rgba(255,255,255,0.1);color:#fff}
-.btn-sm{padding:4px 10px;font-size:10px;border-radius:6px}
-.finp{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:12px;color:#fff;outline:none;width:100%;transition:border-color 0.2s}
-.finp:focus{border-color:var(--org);box-shadow:0 0 0 3px rgba(247,162,0,0.1)}
-.finp::placeholder{color:rgba(255,255,255,0.2)}
-.fsel{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:12px;color:#fff;outline:none;cursor:pointer}
-.fsel option{background:#111320}
-.flbl{font-size:10px;color:rgba(255,255,255,0.4);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;display:block}
+.btn-ghost{background:var(--sur2);border:1px solid var(--bdr);color:var(--txt2)}
+.btn-ghost:hover{color:var(--txt);background:rgba(255,255,255,.08)}
+.btn-sm{padding:4px 9px;font-size:10px;border-radius:6px}
+.finp{background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--txt);outline:none;width:100%;transition:border-color .2s}
+.finp:focus{border-color:var(--org);box-shadow:0 0 0 2px rgba(247,162,0,.1)}
+.finp::placeholder{color:var(--txt3)}
+.fsel{background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:8px 11px;font-size:12px;color:var(--txt);outline:none;cursor:pointer}
+.fsel option{background:var(--sur)}
+.flbl{font-size:10px;font-weight:600;color:var(--txt2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;display:block}
 .atbl{width:100%;border-collapse:collapse}
-.atbl th{font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px;text-transform:uppercase;padding:8px 10px;text-align:left;background:rgba(255,255,255,0.02);border-bottom:1px solid var(--bdr)}
-.atbl td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-size:10px}
-.atbl tr:hover td{background:rgba(247,162,0,0.03)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:300;display:none;align-items:center;justify-content:center}
-.modal-box{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:560px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.8);max-height:85vh;overflow-y:auto}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:live 2s infinite;display:inline-block}
-.new-badge{animation:slideIn 0.4s ease;background:rgba(22,163,74,0.15);border:1px solid rgba(22,163,74,0.3);border-radius:6px}
-.tip{position:relative;cursor:default}
-.tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1E2240;color:#fff;font-size:9px;font-family:'DM Mono',monospace;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.2s;border:1px solid rgba(255,255,255,0.1);z-index:100}
+.atbl th{font-size:9px;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;padding:7px 9px;text-align:left;background:var(--sur2);border-bottom:1px solid var(--bdr)}
+.atbl td{padding:6px 9px;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
+.atbl tr:hover td{background:rgba(247,162,0,.03)}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.mbox{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:24px;max-width:560px;width:90%;max-height:85vh;overflow-y:auto;box-shadow:0 24px 50px rgba(0,0,0,.7)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--grn);animation:live 2s infinite;display:inline-block}
+.pb{font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;flex-shrink:0}
+.pb-P1{background:rgba(239,68,68,.15);color:#F87171;border:1px solid rgba(239,68,68,.2)}
+.pb-P2{background:rgba(247,162,0,.15);color:var(--org);border:1px solid rgba(247,162,0,.2)}
+.pb-P3{background:rgba(34,197,94,.15);color:#4ADE80;border:1px solid rgba(34,197,94,.2)}
+.tip{position:relative}
+.tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:var(--sur2);color:var(--txt);font-size:10px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;border:1px solid var(--bdr);z-index:100;font-family:'Inter',sans-serif}
 .tip:hover::after{opacity:1}
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);border-radius:10px;padding:10px 20px;font-size:12px;font-weight:600;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap}
+.alert-row{background:rgba(239,68,68,.06);border-left:3px solid var(--red);padding:8px 12px;border-radius:0 7px 7px 0;margin-bottom:6px;display:flex;align-items:center;gap:10px;font-size:11px}
+#toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(16px);border-radius:10px;padding:9px 18px;font-size:12px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #gbar{height:2px;background:var(--bdr)}
-#gbf{height:100%;width:0%;background:linear-gradient(90deg,var(--org),var(--od));transition:width 0.5s}
+#gbf{height:100%;width:0%;background:linear-gradient(90deg,var(--org),var(--od));transition:width .5s}
 </style>
 </head>
 <body>
@@ -70,43 +78,39 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
 <!-- LOGIN -->
 <div id="login">
   <div class="lbox">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px">
-      <svg width="36" height="24" viewBox="0 0 200 130" fill="none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+      <svg width="34" height="22" viewBox="0 0 200 130" fill="none">
         <path d="M100 10 C60 10 30 50 20 90 L50 90 C55 65 75 45 100 45 C125 45 145 65 150 90 L180 90 C170 50 140 10 100 10Z" fill="#F7A200"/>
-        <path d="M20 90 C15 70 5 55 0 90 L25 90Z" fill="#E07000"/>
-        <path d="M180 90 C185 70 195 55 200 90 L175 90Z" fill="#E07000"/>
-        <path d="M50 90 C48 75 42 62 35 55 L15 90Z" fill="#F7A200" opacity="0.7"/>
-        <path d="M150 90 C152 75 158 62 165 55 L185 90Z" fill="#F7A200" opacity="0.7"/>
+        <path d="M20 90 C15 70 5 55 0 90 L25 90Z" fill="#E07000"/><path d="M180 90 C185 70 195 55 200 90 L175 90Z" fill="#E07000"/>
+        <path d="M50 90 C48 75 42 62 35 55 L15 90Z" fill="#F7A200" opacity=".7"/><path d="M150 90 C152 75 158 62 165 55 L185 90Z" fill="#F7A200" opacity=".7"/>
         <path d="M85 45 C85 25 95 15 100 10 C105 15 115 25 115 45Z" fill="#E07000"/>
       </svg>
       <div>
-        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:900;color:#fff">ARCHES DASHBOARD</div>
-        <div style="font-size:9px;color:var(--org);letter-spacing:2px;margin-top:2px">MANAGER VIEW</div>
+        <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:900;color:var(--txt)">Arches Dashboard</div>
+        <div style="font-size:9px;color:var(--org);letter-spacing:1.5px;margin-top:2px">MANAGER VIEW</div>
       </div>
     </div>
-    <label class="flbl">Your Name</label>
-    <input class="finp" id="login-name" placeholder="e.g. Luis" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <label class="flbl">Name</label>
+    <input class="finp" id="ln" placeholder="e.g. Luis" style="margin-bottom:10px" onkeydown="if(event.key==='Enter')doLogin()"/>
     <label class="flbl">Password</label>
-    <input class="finp" id="login-pass" type="password" placeholder="••••••••" style="margin-bottom:20px" onkeydown="if(event.key==='Enter')doLogin()"/>
-    <button class="btn btn-org" style="width:100%;justify-content:center;padding:12px" onclick="doLogin()">🚀 Enter Dashboard</button>
-    <div id="login-err" style="color:#FF6B6B;font-size:11px;margin-top:10px;text-align:center;display:none"></div>
+    <input class="finp" id="lp" type="password" placeholder="••••••••" style="margin-bottom:18px" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="btn btn-org" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">Enter Dashboard</button>
+    <div id="lerr" style="color:var(--red);font-size:11px;margin-top:9px;text-align:center;display:none"></div>
   </div>
 </div>
 
 <!-- HEADER -->
 <div id="hdr" style="display:none">
   <div style="display:flex;align-items:center;gap:10px">
-    <svg width="26" height="17" viewBox="0 0 200 130" fill="none">
+    <svg width="24" height="16" viewBox="0 0 200 130" fill="none">
       <path d="M100 10 C60 10 30 50 20 90 L50 90 C55 65 75 45 100 45 C125 45 145 65 150 90 L180 90 C170 50 140 10 100 10Z" fill="#F7A200"/>
-      <path d="M20 90 C15 70 5 55 0 90 L25 90Z" fill="#E07000"/>
-      <path d="M180 90 C185 70 195 55 200 90 L175 90Z" fill="#E07000"/>
-      <path d="M50 90 C48 75 42 62 35 55 L15 90Z" fill="#F7A200" opacity="0.7"/>
-      <path d="M150 90 C152 75 158 62 165 55 L185 90Z" fill="#F7A200" opacity="0.7"/>
+      <path d="M20 90 C15 70 5 55 0 90 L25 90Z" fill="#E07000"/><path d="M180 90 C185 70 195 55 200 90 L175 90Z" fill="#E07000"/>
+      <path d="M50 90 C48 75 42 62 35 55 L15 90Z" fill="#F7A200" opacity=".7"/><path d="M150 90 C152 75 158 62 165 55 L185 90Z" fill="#F7A200" opacity=".7"/>
       <path d="M85 45 C85 25 95 15 100 10 C105 15 115 25 115 45Z" fill="#E07000"/>
     </svg>
     <div>
-      <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:900">ARCHES DASHBOARD</div>
-      <div style="font-size:7px;color:var(--org);letter-spacing:2px" id="hdr-date"></div>
+      <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:900">Arches Dashboard</div>
+      <div style="font-size:8px;color:var(--org);letter-spacing:1.5px" id="hdate"></div>
     </div>
   </div>
   <div class="tab-bar">
@@ -117,11 +121,11 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
     <button class="tab" onclick="showPage('settings',this)">⚙️ Settings</button>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
-    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:rgba(255,255,255,0.4)">
+    <div style="display:flex;align-items:center;gap:5px;font-size:10px;color:var(--txt3)">
       <span class="live-dot"></span>LIVE
     </div>
-    <span id="last-upd" style="font-size:9px;color:rgba(255,255,255,0.3)"></span>
-    <span id="hdr-mgr" style="font-size:11px;color:rgba(255,255,255,0.4)"></span>
+    <span id="lupd" style="font-size:9px;color:var(--txt3)"></span>
+    <span id="hmgr" style="font-size:11px;color:var(--txt2)"></span>
     <button class="btn btn-org btn-sm" onclick="exportExcel()">⬇ Excel</button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">↩ Logout</button>
   </div>
@@ -134,20 +138,35 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
   <!-- OVERVIEW -->
   <div id="page-overview" class="page active">
     <div class="stats-grid" id="stats"></div>
+    <!-- Alerts -->
+    <div id="alerts-section" style="display:none;margin-bottom:14px">
+      <div style="font-size:10px;font-weight:700;color:var(--red);letter-spacing:.8px;text-transform:uppercase;margin-bottom:8px">⚠️ Needs Attention</div>
+      <div id="alerts-list"></div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-      <div class="card"><div class="card-head"><span class="card-title">🟠 Team Luis</span><span id="luis-avg" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:900;color:var(--org)">—</span></div><div id="luis-rows"></div></div>
-      <div class="card"><div class="card-head"><span class="card-title">🔵 Team Taiki</span><span id="taiki-avg" style="font-family:'Syne',sans-serif;font-size:14px;font-weight:900;color:#3B82F6">—</span></div><div id="taiki-rows"></div></div>
+      <div class="card"><div class="ch"><span class="ct">🟠 Team Luis</span><span id="luis-avg" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--org)">—</span></div><div id="luis-rows"></div></div>
+      <div class="card"><div class="ch"><span class="ct">🔵 Team Taiki</span><span id="taiki-avg" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--blu)">—</span></div><div id="taiki-rows"></div></div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="card-head"><span class="card-title">⚡ Live Activity Feed</span><span id="feed-count" style="font-size:9px;color:rgba(255,255,255,0.3)"></span></div>
-      <div id="feed" style="max-height:340px;overflow-y:auto"></div>
+      <div class="ch"><span class="ct">⚡ Live Activity</span><span id="feed-ct" style="font-size:10px;color:var(--txt3)"></span></div>
+      <div id="feed" style="max-height:360px;overflow-y:auto"></div>
     </div>
   </div>
 
   <!-- PERFORMANCE -->
   <div id="page-performance" class="page">
-    <div style="display:flex;gap:10px;margin-bottom:14px">
-      <select class="fsel" id="perf-team" onchange="renderPerf()" style="width:140px"><option value="all">All Teams</option><option value="luis">Team Luis</option><option value="taiki">Team Taiki</option></select>
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
+      <select class="fsel" id="perf-period" onchange="renderPerf()" style="width:130px">
+        <option value="today">Today</option>
+        <option value="week">This Week</option>
+        <option value="month">This Month</option>
+      </select>
+      <select class="fsel" id="perf-team" onchange="renderPerf()" style="width:130px">
+        <option value="all">All Teams</option>
+        <option value="luis">Team Luis</option>
+        <option value="taiki">Team Taiki</option>
+      </select>
+      <div id="weekly-summary" style="display:none;margin-left:auto;background:rgba(247,162,0,.08);border:1px solid rgba(247,162,0,.2);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--org)"></div>
     </div>
     <div id="perf-content"></div>
   </div>
@@ -155,16 +174,23 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
   <!-- HISTORY -->
   <div id="page-history" class="page">
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
-      <input type="date" class="finp" id="hist-from" style="width:145px"/>
-      <span style="color:rgba(255,255,255,0.3);font-size:11px">to</span>
-      <input type="date" class="finp" id="hist-to" style="width:145px"/>
-      <select class="fsel" id="hist-team" style="width:130px"><option value="all">All Teams</option><option value="luis">Team Luis</option><option value="taiki">Team Taiki</option></select>
-      <select class="fsel" id="hist-person" style="width:160px"><option value="">All People</option></select>
-      <button class="btn btn-org btn-sm" onclick="loadHistory()">🔍 Search</button>
+      <input type="date" class="finp" id="hfrom" style="width:145px"/>
+      <span style="color:var(--txt3);font-size:12px">to</span>
+      <input type="date" class="finp" id="hto" style="width:145px"/>
+      <select class="fsel" id="hteam" style="width:130px"><option value="all">All Teams</option><option value="luis">Team Luis</option><option value="taiki">Team Taiki</option></select>
+      <select class="fsel" id="hperson" style="width:155px"><option value="">All People</option></select>
+      <button class="btn btn-org btn-sm" onclick="loadHistory()">Search</button>
     </div>
     <div class="card">
-      <div class="card-head"><span class="card-title">📅 Daily Log</span><span id="hist-count" style="font-size:10px;color:rgba(255,255,255,0.4)"></span></div>
-      <div style="overflow-x:auto"><table class="atbl"><thead><tr><th>Date</th><th>Person</th><th>Team</th><th>Project</th><th>P</th><th>DB</th><th>LI</th><th>Exp</th><th>Calls</th><th>Conn</th><th>InMail</th><th>Emails</th><th>SMS</th><th>Co.Call</th><th>Prop</th><th>Int.S</th><th>Int.D</th><th>Other</th><th>Done</th><th>%</th><th>Del</th></tr></thead><tbody id="hist-body"></tbody></table></div>
+      <div class="ch"><span class="ct">📅 Daily Log</span><span id="hcount" style="font-size:10px;color:var(--txt3)"></span></div>
+      <div style="overflow-x:auto">
+        <table class="atbl">
+          <thead><tr><th>Date</th><th>Person</th><th>Team</th><th>Project</th><th>P</th>
+            ${['🗄️','🔍','📈','📞','🔗','💼','📧','💬','🏢','🤝','🎙️','📅','⚡'].map((e,i)=>`<th class="tip" data-tip="${['DB Search','LI Search','Expansion','Cold Call','Connections','InMail','Emails','SMS','Co.Call','Proposals','Int.Sched','Int.Done','Other'][i]}">${e}</th>`).join('')}
+            <th>Done</th><th>%</th><th></th></tr></thead>
+          <tbody id="hbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -172,48 +198,40 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
   <div id="page-assign" class="page">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="card">
-        <div class="card-head"><span class="card-title">📋 Assign Project</span><span style="font-size:9px;color:rgba(255,255,255,0.35)">Select multiple people</span></div>
-        <div style="padding:16px;display:flex;flex-direction:column;gap:12px">
-          <!-- People multi-select -->
+        <div class="ch"><span class="ct">📋 Assign Project</span><span style="font-size:10px;color:var(--txt3)">Select multiple people</span></div>
+        <div style="padding:15px;display:flex;flex-direction:column;gap:10px">
           <div>
-            <label class="flbl">People <span style="color:rgba(255,255,255,0.3);font-weight:400">(click to select/deselect)</span></label>
-            <div style="display:flex;gap:6px;margin-bottom:8px">
-              <button onclick="selectAllPeople()" class="btn btn-ghost btn-sm">Select All</button>
-              <button onclick="selectTeamPeople('luis')" class="btn btn-ghost btn-sm" style="color:#F7A200;border-color:rgba(247,162,0,0.3)">🟠 All Luis</button>
-              <button onclick="selectTeamPeople('taiki')" class="btn btn-ghost btn-sm" style="color:#3B82F6;border-color:rgba(59,130,246,0.3)">🔵 All Taiki</button>
+            <label class="flbl">People <span style="color:var(--txt3);font-weight:400">(click to select)</span></label>
+            <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">
+              <button onclick="selAllPeople()" class="btn btn-ghost btn-sm">All</button>
+              <button onclick="selTeamPeople('luis')" class="btn btn-sm" style="background:rgba(247,162,0,.1);border:1px solid rgba(247,162,0,.25);color:var(--org)">🟠 Luis</button>
+              <button onclick="selTeamPeople('taiki')" class="btn btn-sm" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.25);color:var(--blu)">🔵 Taiki</button>
               <button onclick="clearPeople()" class="btn btn-ghost btn-sm">Clear</button>
             </div>
-            <div id="people-selector" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+            <div id="people-sel" style="display:flex;flex-wrap:wrap;gap:5px"></div>
           </div>
-          <!-- Project + Priority -->
-          <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
-            <div><label class="flbl">Project Name</label><input class="finp" id="ap-project" placeholder="e.g. advancy_us_specialty_plant"/></div>
-            <div><label class="flbl">Priority</label>
-              <select class="fsel" id="ap-prio">
-                <option value="P1">P1</option>
-                <option value="P2" selected>P2</option>
-                <option value="P3">P3</option>
-              </select>
-            </div>
+          <div style="display:grid;grid-template-columns:1fr auto;gap:8px">
+            <div><label class="flbl">Project Name</label><input class="finp" id="ap-proj" placeholder="e.g. advancy_us_specialty_plant" oninput="updateAssignPreview()"/></div>
+            <div><label class="flbl">Priority</label><select class="fsel" id="ap-prio" onchange="updateAssignPreview()"><option value="P1">P1</option><option value="P2" selected>P2</option><option value="P3">P3</option></select></div>
           </div>
-          <div id="assign-preview" style="display:none;background:rgba(247,162,0,0.08);border:1px solid rgba(247,162,0,0.2);border-radius:8px;padding:10px;font-size:11px;color:rgba(255,255,255,0.6)"></div>
-          <button class="btn btn-org" onclick="assignProject()" id="btn-assign" disabled style="opacity:0.5">✅ Assign to Selected People</button>
+          <div id="ap-preview" style="display:none;background:rgba(247,162,0,.06);border:1px solid rgba(247,162,0,.15);border-radius:8px;padding:9px;font-size:11px;color:var(--txt2)"></div>
+          <button class="btn btn-org" onclick="assignProject()" id="btn-assign" disabled style="opacity:.45">✅ Assign to Selected People</button>
         </div>
       </div>
       <div class="card">
-        <div class="card-head"><span class="card-title">📌 Assigned Today</span><button class="btn btn-ghost btn-sm" onclick="loadAssigned()">↺</button></div>
-        <div id="assigned-list" style="max-height:400px;overflow-y:auto"></div>
+        <div class="ch"><span class="ct">📌 Assigned Today</span><button class="btn btn-ghost btn-sm" onclick="loadAssigned()">↺</button></div>
+        <div id="assigned-list" style="max-height:380px;overflow-y:auto"></div>
       </div>
     </div>
     <div class="card" style="margin-top:14px">
-      <div class="card-head"><span class="card-title">💬 Comments & Feedback</span></div>
-      <div style="padding:14px;display:grid;grid-template-columns:160px 130px 1fr auto;gap:8px;align-items:end;border-bottom:1px solid var(--bdr)">
+      <div class="ch"><span class="ct">💬 Comments & Feedback</span></div>
+      <div style="padding:13px;display:grid;grid-template-columns:155px 130px 1fr auto;gap:8px;align-items:end;border-bottom:1px solid var(--bdr)">
         <div><label class="flbl">Person</label><select class="fsel" id="cm-person" style="width:100%"><option value="">Select…</option></select></div>
         <div><label class="flbl">Date</label><input type="date" class="finp" id="cm-date"/></div>
         <div><label class="flbl">Comment</label><input class="finp" id="cm-text" placeholder="e.g. Great performance today!"/></div>
-        <button class="btn btn-org" onclick="addComment()">Send</button>
+        <button class="btn btn-org" onclick="addComment()" style="align-self:flex-end">Send</button>
       </div>
-      <div id="comments-list" style="max-height:280px;overflow-y:auto"></div>
+      <div id="cmt-list" style="max-height:260px;overflow-y:auto"></div>
     </div>
   </div>
 
@@ -221,26 +239,26 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
   <div id="page-settings" class="page">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
       <div class="card">
-        <div class="card-head"><span class="card-title">🎯 Action Targets</span><button class="btn btn-org btn-sm" onclick="saveTargets()">💾 Save</button></div>
-        <div style="padding:14px;display:flex;flex-direction:column;gap:8px" id="targets-form"></div>
+        <div class="ch"><span class="ct">🎯 Action Targets</span><button class="btn btn-org btn-sm" onclick="saveTargets()">💾 Save</button></div>
+        <div style="padding:13px;display:flex;flex-direction:column;gap:7px" id="tgt-form"></div>
       </div>
       <div>
         <div class="card" style="margin-bottom:14px">
-          <div class="card-head"><span class="card-title">👥 Team Members</span></div>
-          <div style="padding:14px">
-            <div style="display:flex;gap:8px;margin-bottom:10px">
+          <div class="ch"><span class="ct">👥 Team Members</span></div>
+          <div style="padding:13px">
+            <div style="display:flex;gap:7px;margin-bottom:10px">
               <input class="finp" id="new-mem" placeholder="New member name…"/>
-              <select class="fsel" id="new-mem-team" style="width:110px"><option value="luis">Team Luis</option><option value="taiki">Team Taiki</option></select>
+              <select class="fsel" id="new-mem-team" style="width:110px"><option value="luis">Luis</option><option value="taiki">Taiki</option></select>
               <button class="btn btn-org btn-sm" onclick="addMember()" style="white-space:nowrap">+ Add</button>
             </div>
-            <div id="mem-list" style="max-height:260px;overflow-y:auto"></div>
+            <div id="mem-list" style="max-height:240px;overflow-y:auto"></div>
           </div>
         </div>
         <div class="card">
-          <div class="card-head"><span class="card-title">🔐 Manager Access</span></div>
-          <div style="padding:14px">
+          <div class="ch"><span class="ct">🔐 Manager Access</span></div>
+          <div style="padding:13px">
             <div id="mgr-list" style="margin-bottom:10px"></div>
-            <div style="display:flex;gap:8px">
+            <div style="display:flex;gap:7px">
               <input class="finp" id="new-mgr-n" placeholder="Name…"/>
               <input class="finp" id="new-mgr-p" type="password" placeholder="Password…"/>
               <button class="btn btn-org btn-sm" onclick="addManager()" style="white-space:nowrap">+ Add</button>
@@ -253,11 +271,11 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
 </div>
 
 <!-- DETAIL MODAL -->
-<div class="modal-overlay" id="detail-modal">
-  <div class="modal-box">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:900;color:var(--org);margin-bottom:16px" id="modal-title"></div>
-    <div id="modal-body"></div>
-    <button class="btn btn-ghost" style="margin-top:16px;width:100%;justify-content:center" onclick="document.getElementById('detail-modal').style.display='none'">Close</button>
+<div class="modal-ov" id="det-modal">
+  <div class="mbox">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:900;color:var(--org);margin-bottom:14px" id="det-title"></div>
+    <div id="det-body"></div>
+    <button class="btn btn-ghost" style="margin-top:14px;width:100%;justify-content:center" onclick="document.getElementById('det-modal').style.display='none'">Close</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -291,65 +309,44 @@ const DEFAULT_MEMBERS={
   taiki:["Andres Rodriguez","Majo Villalba","MariaP Puerto","JuanPa Leon","Nicolas Rosero","Lala Phan","Thomas Botto"]
 };
 
-let currentManager=null;
-let todayLogs=[];
-let realtimeCh=null;
-
-const getManagers=()=>JSON.parse(localStorage.getItem("arches_mgrs")||JSON.stringify(DEFAULT_MANAGERS));
-const getMembers=()=>JSON.parse(localStorage.getItem("arches_members")||JSON.stringify(DEFAULT_MEMBERS));
-const getTargets=()=>{const t=JSON.parse(localStorage.getItem("arches_targets")||"{}");ACTIONS.forEach(a=>{if(!t[a.id])t[a.id]=a.target;});return t;};
-const allMembers=()=>{const m=getMembers();return [...(m.luis||[]),...(m.taiki||[])];};
-const memberTeam=(name)=>{const m=getMembers();for(const[tid,names]of Object.entries(m))if(names.includes(name))return tid;return null;};
+let currentMgr=null, todayLogs=[], rtCh=null;
+const getMgrs=()=>JSON.parse(localStorage.getItem("am")||JSON.stringify(DEFAULT_MANAGERS));
+const getMembers=()=>JSON.parse(localStorage.getItem("amem")||JSON.stringify(DEFAULT_MEMBERS));
+const getTgts=()=>{const t=JSON.parse(localStorage.getItem("atgt")||"{}");ACTIONS.forEach(a=>{if(!t[a.id])t[a.id]=a.target;});return t;};
+const allMems=()=>{const m=getMembers();return[...(m.luis||[]),...(m.taiki||[])];};
+const memTeam=(n)=>{const m=getMembers();for(const[t,ns]of Object.entries(m))if(ns.includes(n))return t;return null;};
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
 function doLogin(){
-  const name=document.getElementById("login-name").value.trim();
-  const pass=document.getElementById("login-pass").value;
-  const mgr=getManagers().find(m=>m.name.toLowerCase()===name.toLowerCase()&&m.pass===pass);
-  if(!mgr){document.getElementById("login-err").style.display="block";document.getElementById("login-err").textContent="❌ Invalid name or password";return;}
-  currentManager=mgr.name;
-  localStorage.setItem("arches_session",JSON.stringify({name:mgr.name,ts:Date.now()}));
+  const name=document.getElementById("ln").value.trim(),pass=document.getElementById("lp").value;
+  const mgr=getMgrs().find(m=>m.name.toLowerCase()===name.toLowerCase()&&m.pass===pass);
+  if(!mgr){document.getElementById("lerr").style.display="block";document.getElementById("lerr").textContent="❌ Invalid credentials";return;}
+  currentMgr=mgr.name;
+  localStorage.setItem("as",JSON.stringify({name:mgr.name,ts:Date.now()}));
   showApp();
 }
-function doLogout(){localStorage.removeItem("arches_session");if(realtimeCh)db.removeChannel(realtimeCh);location.reload();}
-function checkSession(){const s=localStorage.getItem("arches_session");if(!s)return;const sess=JSON.parse(s);if(Date.now()-sess.ts>8*60*60*1000){localStorage.removeItem("arches_session");return;}currentManager=sess.name;showApp();}
+function doLogout(){localStorage.removeItem("as");if(rtCh)db.removeChannel(rtCh);location.reload();}
+function checkSession(){const s=localStorage.getItem("as");if(!s)return;const sess=JSON.parse(s);if(Date.now()-sess.ts>8*3600000){localStorage.removeItem("as");return;}currentMgr=sess.name;showApp();}
 
 function showApp(){
   document.getElementById("login").style.display="none";
   document.getElementById("hdr").style.display="flex";
   document.getElementById("content").style.display="block";
   document.getElementById("gbar").style.display="block";
-  document.getElementById("hdr-mgr").textContent=currentManager;
-  document.getElementById("hdr-date").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}).toUpperCase();
-  populateSelects();
-  renderPeopleSelector();
-  loadToday();
-  loadAssigned();
-  loadComments();
-  setupRealtime();
-  // Set default dates
+  document.getElementById("hmgr").textContent=currentMgr;
+  document.getElementById("hdate").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}).toUpperCase();
   const today=new Date().toISOString().split("T")[0];
-  document.getElementById("hist-from").value=today;
-  document.getElementById("hist-to").value=today;
-  document.getElementById("cm-date").value=today;
-  renderTargetsForm();
-  renderMembersList();
-  renderManagersList();
+  document.getElementById("hfrom").value=today;document.getElementById("hto").value=today;document.getElementById("cm-date").value=today;
+  populateSels();loadToday();loadAssigned();loadComments();renderPeopleSelector();setupRealtime();
+  renderTgtForm();renderMemList();renderMgrList();
 }
 
 // ── REALTIME ──────────────────────────────────────────────────────────────────
 function setupRealtime(){
-  realtimeCh=db.channel("dashboard-rt")
-    .on("postgres_changes",{event:"*",schema:"public",table:"daily_logs"},payload=>{
-      loadToday();
-      showToast("📊 Live update received!","info");
-    })
-    .on("postgres_changes",{event:"INSERT",schema:"public",table:"assigned_projects"},payload=>{
-      loadAssigned();
-    })
-    .on("postgres_changes",{event:"INSERT",schema:"public",table:"comments"},payload=>{
-      loadComments();
-    })
+  rtCh=db.channel("dash-rt")
+    .on("postgres_changes",{event:"*",schema:"public",table:"daily_logs"},()=>{loadToday();showToast("📊 Live update!","info");})
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"assigned_projects"},()=>loadAssigned())
+    .on("postgres_changes",{event:"INSERT",schema:"public",table:"comments"},()=>loadComments())
     .subscribe();
 }
 
@@ -358,13 +355,11 @@ async function loadToday(){
   const today=new Date().toISOString().split("T")[0];
   const{data}=await db.from("daily_logs").select("*").eq("date",today).order("created_at",{ascending:false});
   todayLogs=data||[];
-  document.getElementById("last-upd").textContent=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
-  renderOverview();
-  renderPerf();
-  // Update global bar
-  const people=[...new Set(todayLogs.map(r=>r.person))];
-  const total=allMembers().length;
-  document.getElementById("gbf").style.width=total>0?Math.round(people.length/total*100)+"%":"0%";
+  document.getElementById("lupd").textContent=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
+  renderOverview();renderPerf();
+  const total=allMems().length;
+  const active=[...new Set(todayLogs.map(r=>r.person))].length;
+  document.getElementById("gbf").style.width=total>0?Math.round(active/total*100)+"%":"0%";
 }
 
 // ── OVERVIEW ──────────────────────────────────────────────────────────────────
@@ -374,121 +369,152 @@ function renderOverview(){
   const totalEmails=todayLogs.reduce((s,r)=>s+(r.emails||0),0);
   const totalCalls=todayLogs.reduce((s,r)=>s+(r.cold_call||0),0);
   const done100=people.filter(p=>todayLogs.filter(r=>r.person===p).some(r=>r.pct>=100)).length;
-
   document.getElementById("stats").innerHTML=`
-    <div class="stat-card"><div class="stat-val">${people.length}</div><div class="stat-lbl">Active Today</div></div>
-    <div class="stat-card"><div class="stat-val">${avgPct}%</div><div class="stat-lbl">Avg Complete</div></div>
-    <div class="stat-card"><div class="stat-val">${done100}</div><div class="stat-lbl">100% Done</div></div>
-    <div class="stat-card"><div class="stat-val">${totalEmails}</div><div class="stat-lbl">Total Emails</div></div>
-    <div class="stat-card"><div class="stat-val">${totalCalls}</div><div class="stat-lbl">Total Calls</div></div>`;
+    <div class="stat"><div class="sv">${people.length}</div><div class="sl">Active Today</div></div>
+    <div class="stat"><div class="sv">${avgPct}%</div><div class="sl">Avg Complete</div></div>
+    <div class="stat"><div class="sv">${done100}</div><div class="sl">100% Done</div></div>
+    <div class="stat"><div class="sv">${totalEmails}</div><div class="sl">Total Emails</div></div>
+    <div class="stat"><div class="sv">${totalCalls}</div><div class="sl">Total Calls</div></div>`;
+
+  // Alerts — people with no activity for 2+ hours
+  const now=Date.now();
+  const alerts=allMems().filter(m=>{
+    const mLogs=todayLogs.filter(r=>r.person===m);
+    if(mLogs.length===0) return false;
+    const latest=Math.max(...mLogs.map(r=>new Date(r.created_at).getTime()));
+    return(now-latest)>2*3600000;
+  });
+  const aSection=document.getElementById("alerts-section");
+  const aList=document.getElementById("alerts-list");
+  if(alerts.length>0){
+    aSection.style.display="block";
+    aList.innerHTML=alerts.map(m=>{
+      const mLogs=todayLogs.filter(r=>r.person===m);
+      const latest=new Date(Math.max(...mLogs.map(r=>new Date(r.created_at).getTime())));
+      const hoursAgo=Math.round((now-latest.getTime())/3600000);
+      return`<div class="alert-row"><span style="font-size:14px">⚠️</span><div><strong style="color:var(--txt)">${m}</strong> <span style="color:var(--txt2)">— last activity ${hoursAgo}h ago</span></div><button class="btn btn-sm" style="margin-left:auto;background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#F87171" onclick="showDetail('${m}')">View</button></div>`;
+    }).join("");
+  } else { aSection.style.display="none"; }
 
   renderTeam("luis","luis-rows","luis-avg","#F7A200");
   renderTeam("taiki","taiki-rows","taiki-avg","#3B82F6");
 
-  // Feed — show latest activity per person+project
+  // Feed
   const feed=document.getElementById("feed");
-  document.getElementById("feed-count").textContent=`${todayLogs.length} updates`;
-  if(todayLogs.length===0){
-    feed.innerHTML=`<div style="padding:24px;text-align:center;font-size:11px;color:rgba(255,255,255,0.25)">No activity yet — team is working… 🔄</div>`;
-    return;
-  }
+  document.getElementById("feed-ct").textContent=`${todayLogs.length} updates`;
+  if(todayLogs.length===0){feed.innerHTML=`<div style="padding:20px;text-align:center;font-size:12px;color:var(--txt3);font-style:italic">No activity yet — waiting for team sync</div>`;return;}
 
-  // Group by person — show latest per person
+  // Group by person — latest per person
   const byPerson={};
-  todayLogs.forEach(r=>{
-    const key=r.person;
-    if(!byPerson[key]||new Date(r.created_at)>new Date(byPerson[key].created_at)) byPerson[key]=r;
-  });
-
-  // Build action highlights for each person
-  const AMAP={db_search:"🗄️",li_search:"🔍",expansion:"📈",cold_call:"📞",connections:"🔗",inmail:"💼",emails:"📧",sms:"💬",company_call:"🏢",proposals:"🤝",int_sched:"🎙️",int_done:"📅",other:"⚡"};
-  const ATGT={db_search:1,li_search:25,expansion:60,cold_call:20,connections:25,inmail:10,emails:40,sms:15,company_call:1,proposals:3,int_sched:2,int_done:1,other:1};
-
-  // Sort by most recent
+  todayLogs.forEach(r=>{const k=r.person;if(!byPerson[k]||new Date(r.created_at)>new Date(byPerson[k].created_at))byPerson[k]=r;});
   const sorted=Object.values(byPerson).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+  const targets=getTgts();
 
   feed.innerHTML=sorted.map(r=>{
     const team=TEAMS[r.team_id];
-    const color=r.pct>=80?"#4ADE80":r.pct>=50?"#EAB308":"#FF6B6B";
+    const color=r.pct>=80?"var(--grn)":r.pct>=50?"var(--ylw)":"var(--red)";
     const time=new Date(r.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
-
-    // Show action counts as mini pills
-    const actionPills=Object.entries(AMAP).map(([id,emoji])=>{
-      const v=r[id]||0, t=ATGT[id]||1;
-      if(v===0) return "";
+    const notes=r.action_notes||{};
+    const pills=ACTIONS.map(a=>{
+      const v=r[a.id]||0,t=targets[a.id]||a.target,note=notes[a.id]||"";
+      if(v===0&&!note) return "";
       const done=v>=t;
-      return `<span class="tip" data-tip="${Object.keys(AMAP).find(k=>AMAP[k]===emoji)||id}: ${v}/${t}" style="font-size:9px;padding:2px 6px;border-radius:6px;background:${done?"rgba(22,163,74,0.15)":"rgba(234,179,8,0.15)"};color:${done?"#4ADE80":"#EAB308"};border:1px solid ${done?"rgba(22,163,74,0.25)":"rgba(234,179,8,0.25)"}">${emoji} ${v}</span>`;
+      return`<span class="tip" data-tip="${a.name}: ${v}/${t}${note?` — "${note}"`:""}${done?" ✓":""}" style="font-size:9px;padding:2px 6px;border-radius:5px;background:${done?"rgba(34,197,94,.12)":note?"rgba(234,179,8,.12)":"rgba(234,179,8,.1)"};color:${done?"#4ADE80":note?"var(--ylw)":"var(--txt2)"};border:1px solid ${done?"rgba(34,197,94,.2)":note?"rgba(234,179,8,.2)":"rgba(255,255,255,.08)"}">${a.emoji} ${v}${note?` 💬`:""}</span>`;
     }).filter(Boolean).join(" ");
 
-    return `<div onclick="showDetail('${r.person}')" style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(247,162,0,0.04)'" onmouseout="this.style.background='transparent'">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <div style="width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 6px #4ADE80;flex-shrink:0"></div>
-          <span style="font-size:12px;font-weight:700;color:#fff">${r.person}</span>
-          ${team?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${team.color}20;color:${team.color};font-weight:700">${team.emoji} ${team.name}</span>`:""}
+    return`<div onclick="showDetail('${r.person}')" style="padding:10px 15px;border-bottom:1px solid rgba(255,255,255,.04);cursor:pointer;transition:background .15s" onmouseover="this.style.background='rgba(247,162,0,.04)'" onmouseout="this.style.background='transparent'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:7px">
+          <div style="width:6px;height:6px;border-radius:50%;background:var(--grn);box-shadow:0 0 5px var(--grn);flex-shrink:0"></div>
+          <span style="font-size:12px;font-weight:600;color:var(--txt)">${r.person}</span>
+          ${team?`<span style="font-size:9px;padding:2px 6px;border-radius:7px;background:${team.color}18;color:${team.color};font-weight:600">${team.emoji} ${team.name}</span>`:""}
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:900;color:${color}">${r.pct}%</span>
-          <span style="font-size:9px;color:rgba(255,255,255,0.3)">${time}</span>
+          <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:${color}">${r.pct}%</span>
+          <span style="font-size:9px;color:var(--txt3)">${time}</span>
         </div>
       </div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${r.project}</div>
-      <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:6px">
-        <div style="height:100%;width:${r.pct}%;background:${color};border-radius:2px;transition:width 0.5s"></div>
+      <div style="font-size:10px;color:var(--txt3);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${r.project}</div>
+      <div style="height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${r.pct}%;background:${color};border-radius:2px;transition:width .5s"></div>
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px">${actionPills||'<span style="font-size:9px;color:rgba(255,255,255,0.2);font-style:italic">No actions logged yet</span>'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${pills||`<span style="font-size:10px;color:var(--txt3);font-style:italic">No actions logged yet</span>`}</div>
     </div>`;
   }).join("");
 }
 
-function renderTeam(teamId,listId,avgId,color){
-  const members=(getMembers()[teamId]||[]);
+function renderTeam(tid,listId,avgId,color){
+  const members=(getMembers()[tid]||[]);
   const el=document.getElementById(listId);
-  const teamLogs=todayLogs.filter(r=>r.team_id===teamId||members.includes(r.person));
+  const teamLogs=todayLogs.filter(r=>r.team_id===tid||members.includes(r.person));
   const avg=teamLogs.length>0?Math.round(teamLogs.reduce((s,r)=>s+r.pct,0)/teamLogs.length):0;
   document.getElementById(avgId).textContent=avg+"%";
   el.innerHTML=members.map(m=>{
-    const mLogs=todayLogs.filter(r=>r.person===m);
-    const mPct=mLogs.length>0?Math.round(mLogs.reduce((s,r)=>s+r.pct,0)/mLogs.length):0;
-    const has=mLogs.length>0;
-    const c=mPct>=80?"#4ADE80":mPct>=50?"#EAB308":has?"#FF6B6B":"rgba(255,255,255,0.2)";
-    return `<div class="prow" onclick="showDetail('${m}')" style="grid-template-columns:150px 50px 1fr 70px 10px">
-      <div><div style="font-size:11px;font-weight:600;color:#fff">${m}</div><div style="font-size:9px;color:rgba(255,255,255,0.3)">${has?mLogs.length+" project(s)":"No data yet"}</div></div>
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:900;color:${c}">${has?mPct+"%":"—"}</div>
-      <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden"><div style="height:100%;width:${mPct}%;background:${has?c:"transparent"}"></div></div>
-      <div style="font-size:9px;color:rgba(255,255,255,0.3)">${has?mLogs.reduce((s,r)=>s+(r.emails||0),0)+" emails":"—"}</div>
-      <div style="width:7px;height:7px;border-radius:50%;background:${has?"#4ADE80":"rgba(255,255,255,0.1)"}"></div>
+    const ml=todayLogs.filter(r=>r.person===m);
+    const mp=ml.length>0?Math.round(ml.reduce((s,r)=>s+r.pct,0)/ml.length):0;
+    const has=ml.length>0;
+    const c=mp>=80?"var(--grn)":mp>=50?"var(--ylw)":has?"var(--red)":"var(--txt3)";
+    const now=Date.now();
+    const inactive=has&&(now-Math.max(...ml.map(r=>new Date(r.created_at).getTime())))>2*3600000;
+    return`<div class="prow" onclick="showDetail('${m}')" style="grid-template-columns:150px 48px 1fr 75px 10px">
+      <div><div style="font-size:12px;font-weight:600;color:var(--txt)">${m}</div><div style="font-size:10px;color:var(--txt3)">${has?ml.length+" project(s)":"No data yet"}${inactive?" · ⚠️ inactive":""}</div></div>
+      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:${c}">${has?mp+"%":"—"}</div>
+      <div style="height:3px;background:var(--bdr);border-radius:2px;overflow:hidden"><div style="height:100%;width:${mp}%;background:${has?c:"transparent"};border-radius:2px;transition:width .5s"></div></div>
+      <div style="font-size:10px;color:var(--txt3)">${has?ml.reduce((s,r)=>s+(r.emails||0),0)+" emails":"—"}</div>
+      <div style="width:6px;height:6px;border-radius:50%;background:${has?"var(--grn)":"var(--bdr)"}"></div>
     </div>`;
   }).join("");
 }
 
 // ── PERFORMANCE ───────────────────────────────────────────────────────────────
-function renderPerf(){
+async function renderPerf(){
+  const period=document.getElementById("perf-period")?.value||"today";
   const teamFilter=document.getElementById("perf-team")?.value||"all";
-  let rows=teamFilter==="all"?todayLogs:todayLogs.filter(r=>r.team_id===teamFilter||getMembers()[teamFilter]?.includes(r.person));
+  let rows=[];
+
+  if(period==="today"){
+    rows=teamFilter==="all"?todayLogs:todayLogs.filter(r=>r.team_id===teamFilter||getMembers()[teamFilter]?.includes(r.person));
+  } else {
+    const now=new Date(),from=new Date();
+    if(period==="week")from.setDate(now.getDate()-7);
+    else from.setDate(now.getDate()-30);
+    let q=db.from("daily_logs").select("*").gte("date",from.toISOString().split("T")[0]).lte("date",now.toISOString().split("T")[0]);
+    if(teamFilter!=="all")q=q.eq("team_id",teamFilter);
+    const{data}=await q;rows=data||[];
+  }
+
+  // Weekly summary
+  if(period==="week"){
+    const people=[...new Set(rows.map(r=>r.person))];
+    const avgPct=rows.length>0?Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length):0;
+    const ws=document.getElementById("weekly-summary");
+    ws.style.display="block";ws.textContent=`Week avg: ${avgPct}% · ${people.length} people · ${rows.length} reports`;
+  } else document.getElementById("weekly-summary").style.display="none";
+
   const byPerson={};
   rows.forEach(r=>{
-    if(!byPerson[r.person]) byPerson[r.person]={name:r.person,team:r.team_id||memberTeam(r.person),pcts:[],totals:{}};
-    byPerson[r.person].pcts.push(r.pct);
+    if(!byPerson[r.person])byPerson[r.person]={name:r.person,team:r.team_id||memTeam(r.person),pcts:[],totals:{},days:new Set()};
+    byPerson[r.person].pcts.push(r.pct);byPerson[r.person].days.add(r.date);
     ACTIONS.forEach(a=>{byPerson[r.person].totals[a.id]=(byPerson[r.person].totals[a.id]||0)+(r[a.id]||0);});
   });
   const people=Object.values(byPerson).sort((a,b)=>(b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length)-(a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length));
   const el=document.getElementById("perf-content");
-  if(people.length===0){el.innerHTML=`<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3)">No data yet today</div>`;return;}
-  const targets=getTargets();
-  el.innerHTML=`<div class="card"><div class="card-head"><span class="card-title">📈 Today's Performance Ranking</span></div><div style="overflow-x:auto"><table class="atbl">
-    <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Avg%</th><th>Bar</th>${ACTIONS.map(a=>`<th class="tip" data-tip="${a.name}">${a.emoji}</th>`).join("")}</tr></thead>
+  if(people.length===0){el.innerHTML=`<div style="padding:30px;text-align:center;color:var(--txt3);font-size:12px">No data for selected period</div>`;return;}
+  const targets=getTgts();
+  el.innerHTML=`<div class="card"><div class="ch"><span class="ct">📈 Performance Ranking</span></div><div style="overflow-x:auto"><table class="atbl">
+    <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Days</th><th>Avg %</th><th>Bar</th>${ACTIONS.map(a=>`<th class="tip" data-tip="${a.name}">${a.emoji}</th>`).join("")}</tr></thead>
     <tbody>${people.map((p,i)=>{
       const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
-      const color=avg>=80?"#4ADE80":avg>=50?"#EAB308":"#FF6B6B";
+      const color=avg>=80?"var(--grn)":avg>=50?"var(--ylw)":"var(--red)";
       const team=TEAMS[p.team];
       return`<tr>
-        <td style="color:rgba(255,255,255,0.4)">${["🥇","🥈","🥉"][i]||i+1}</td>
+        <td style="color:var(--txt3)">${["🥇","🥈","🥉"][i]||i+1}</td>
         <td style="font-weight:600;color:var(--org);cursor:pointer" onclick="showDetail('${p.name}')">${p.name}</td>
-        <td>${team?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${team.color}20;color:${team.color}">${team.emoji} ${team.name}</span>`:"—"}</td>
-        <td style="font-family:'Syne',sans-serif;font-weight:900;color:${color}">${avg}%</td>
-        <td><div style="width:80px;height:4px;background:rgba(255,255,255,0.08);border-radius:2px;overflow:hidden"><div style="height:100%;width:${avg}%;background:${color}"></div></div></td>
-        ${ACTIONS.map(a=>{const v=p.totals[a.id]||0;const t=targets[a.id]||a.target;return`<td style="color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.25)"};font-weight:${v>0?600:400}">${v}</td>`;}).join("")}
+        <td>${team?`<span style="font-size:9px;padding:2px 5px;border-radius:6px;background:${team.color}18;color:${team.color}">${team.emoji} ${team.name}</span>`:"—"}</td>
+        <td style="color:var(--txt3)">${p.days.size}</td>
+        <td style="font-family:'Syne',sans-serif;font-weight:800;color:${color}">${avg}%</td>
+        <td><div style="width:70px;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden"><div style="height:100%;width:${avg}%;background:${color};border-radius:2px"></div></div></td>
+        ${ACTIONS.map(a=>{const v=p.totals[a.id]||0,t=targets[a.id]||a.target;return`<td class="tip" data-tip="${a.name}: ${v}/${t}" style="color:${v>=t?"var(--grn)":v>0?"var(--org)":"var(--txt3)"};font-weight:${v>0?600:400}">${v}</td>`;}).join("")}
       </tr>`;
     }).join("")}</tbody>
   </table></div></div>`;
@@ -496,264 +522,182 @@ function renderPerf(){
 
 // ── HISTORY ───────────────────────────────────────────────────────────────────
 async function loadHistory(){
-  const from=document.getElementById("hist-from").value;
-  const to=document.getElementById("hist-to").value;
-  const team=document.getElementById("hist-team").value;
-  const person=document.getElementById("hist-person").value;
+  const from=document.getElementById("hfrom").value,to=document.getElementById("hto").value;
+  const team=document.getElementById("hteam").value,person=document.getElementById("hperson").value;
   let q=db.from("daily_logs").select("*").gte("date",from).lte("date",to).order("date",{ascending:false});
-  if(team!=="all") q=q.eq("team_id",team);
-  if(person) q=q.eq("person",person);
-  const{data}=await q.limit(500);
-  const rows=data||[];
-  document.getElementById("hist-count").textContent=`${rows.length} records`;
-  const targets=getTargets();
-  const tbody=document.getElementById("hist-body");
-  tbody.innerHTML=rows.map(r=>{
-    const team=TEAMS[r.team_id];
-    const color=r.pct>=80?"#4ADE80":r.pct>=50?"#EAB308":"#FF6B6B";
+  if(team!=="all")q=q.eq("team_id",team);if(person)q=q.eq("person",person);
+  const{data}=await q.limit(500);const rows=data||[];
+  document.getElementById("hcount").textContent=`${rows.length} records`;
+  const targets=getTgts();
+  document.getElementById("hbody").innerHTML=rows.map(r=>{
+    const team=TEAMS[r.team_id],color=r.pct>=80?"var(--grn)":r.pct>=50?"var(--ylw)":"var(--red)";
     return`<tr>
-      <td style="color:rgba(255,255,255,0.5)">${r.date}</td>
-      <td style="font-weight:600;color:#fff;cursor:pointer" onclick="showDetail('${r.person}')">${r.person}</td>
-      <td>${team?`<span style="font-size:9px;padding:1px 5px;border-radius:6px;background:${team.color}20;color:${team.color}">${team.emoji}</span>`:"—"}</td>
-      <td style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.project}</td>
-      <td><span style="font-size:9px;padding:1px 5px;border-radius:5px;background:rgba(247,162,0,0.15);color:var(--org)">${r.priority}</span></td>
-      ${ACTIONS.map(a=>{const v=r[a.id]||0;const t=targets[a.id]||a.target;return`<td class="tip" data-tip="${a.name}: ${v}/${t}"  style="color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.25)"}">${v}</td>`;}).join("")}
+      <td style="color:var(--txt3)">${r.date}</td>
+      <td style="font-weight:600;color:var(--txt);cursor:pointer" onclick="showDetail('${r.person}')">${r.person}</td>
+      <td>${team?`<span style="font-size:9px;padding:1px 5px;border-radius:5px;background:${team.color}18;color:${team.color}">${team.emoji}</span>`:"—"}</td>
+      <td style="font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.project}</td>
+      <td><span class="pb pb-${r.priority}">${r.priority}</span></td>
+      ${ACTIONS.map(a=>{const v=r[a.id]||0,t=targets[a.id]||a.target;return`<td class="tip" data-tip="${a.name}: ${v}/${t}" style="color:${v>=t?"var(--grn)":v>0?"var(--org)":"var(--txt3)"}">${v}</td>`;}).join("")}
       <td>${r.actions_done}</td>
-      <td style="font-family:'Syne',sans-serif;font-weight:900;color:${color}">${r.pct}%</td>
-      <td><button class="btn btn-sm" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FF6B6B;padding:3px 8px" onclick="deleteLog(${r.id})">🗑</button></td>
+      <td style="font-family:'Syne',sans-serif;font-weight:800;color:${color}">${r.pct}%</td>
+      <td><button class="btn btn-sm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171" onclick="deleteLog(${r.id})">🗑</button></td>
     </tr>`;
   }).join("");
 }
 async function deleteLog(id){if(!confirm("Delete?"))return;await db.from("daily_logs").delete().eq("id",id);showToast("Deleted","info");loadHistory();}
-
-// ── ASSIGN ────────────────────────────────────────────────────────────────────
-let selectedPeople = new Set();
-
-function renderPeopleSelector(){
-  const members = getMembers();
-  const el = document.getElementById("people-selector");
-  if(!el) return;
-  el.innerHTML = Object.entries(members).map(([tid, names])=>
-    names.map(name=>{
-      const team = TEAMS[tid];
-      const sel = selectedPeople.has(name);
-      return `<div onclick="togglePerson('${name}')" id="pp-${name.replace(/\s/g,'_')}"
-        style="display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:8px;cursor:pointer;border:1px solid ${sel?team.color+"80":"rgba(255,255,255,0.08)"};background:${sel?team.color+"20":"rgba(255,255,255,0.03)"};transition:all 0.15s;user-select:none">
-        <div style="width:6px;height:6px;border-radius:50%;background:${sel?team.color:"rgba(255,255,255,0.2)"}"></div>
-        <span style="font-size:11px;color:${sel?"#fff":"rgba(255,255,255,0.5)"};font-weight:${sel?700:400}">${name}</span>
-      </div>`;
-    }).join("")
-  ).join("");
-  updateAssignPreview();
-}
-
-function togglePerson(name){
-  if(selectedPeople.has(name)) selectedPeople.delete(name);
-  else selectedPeople.add(name);
-  renderPeopleSelector();
-}
-
-function selectAllPeople(){
-  const m=getMembers();Object.values(m).flat().forEach(n=>selectedPeople.add(n));renderPeopleSelector();
-}
-function selectTeamPeople(tid){
-  const m=getMembers();(m[tid]||[]).forEach(n=>selectedPeople.add(n));renderPeopleSelector();
-}
-function clearPeople(){ selectedPeople.clear(); renderPeopleSelector(); }
-
-function updateAssignPreview(){
-  const project = document.getElementById("ap-project")?.value.trim();
-  const prio = document.getElementById("ap-prio")?.value||"P2";
-  const btn = document.getElementById("btn-assign");
-  const preview = document.getElementById("assign-preview");
-  const count = selectedPeople.size;
-  if(count>0 && project){
-    preview.style.display="block";
-    preview.innerHTML=`📋 Will assign <strong style="color:#F7A200">${project}</strong> [${prio}] to <strong style="color:#F7A200">${count} person(s):</strong> ${[...selectedPeople].join(", ")}`;
-    if(btn){btn.disabled=false;btn.style.opacity="1";}
-  } else {
-    preview.style.display="none";
-    if(btn){btn.disabled=true;btn.style.opacity="0.5";}
-  }
-}
-
-async function assignProject(){
-  const project=document.getElementById("ap-project").value.trim();
-  const prio=document.getElementById("ap-prio").value;
-  const today=new Date().toISOString().split("T")[0];
-  if(selectedPeople.size===0||!project){showToast("⚠️ Select people and enter project","error");return;}
-  const rows=[...selectedPeople].map(person=>({person,project,priority:prio,date:today,assigned_by:currentManager}));
-  const{error}=await db.from("assigned_projects").insert(rows);
-  if(error){showToast("⚠️ Error: "+error.message,"error");return;}
-  showToast(`✅ Assigned to ${rows.length} people — appears in their tracker within 60s!`,"success");
-  document.getElementById("ap-project").value="";
-  selectedPeople.clear();
-  renderPeopleSelector();
-  loadAssigned();
-}
-
-// Update preview when project name or prio changes
-document.addEventListener("DOMContentLoaded",()=>{
-  const projInp = document.getElementById("ap-project");
-  const prioSel = document.getElementById("ap-prio");
-  if(projInp) projInp.addEventListener("input", updateAssignPreview);
-  if(prioSel) prioSel.addEventListener("change", updateAssignPreview);
-});
-
-async function loadAssigned(){
-  const today=new Date().toISOString().split("T")[0];
-  const{data}=await db.from("assigned_projects").select("*").eq("date",today).order("created_at",{ascending:false});
-  const rows=data||[];
-  const el=document.getElementById("assigned-list");
-  if(rows.length===0){el.innerHTML=`<div style="padding:14px;font-size:11px;color:rgba(255,255,255,0.2)">No assignments today</div>`;return;}
-  el.innerHTML=rows.map(r=>`
-    <div style="padding:9px 14px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:space-between;gap:8px">
-      <div><div style="font-size:11px;font-weight:600;color:#fff">${r.person}</div><div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px">${r.project}</div></div>
-      <div style="display:flex;align-items:center;gap:6px">
-        <span style="font-size:9px;padding:2px 6px;border-radius:5px;background:rgba(247,162,0,0.15);color:var(--org)">${r.priority}</span>
-        <span style="font-size:9px;color:rgba(255,255,255,0.25)">by ${r.assigned_by}</span>
-        <button class="btn btn-sm" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FF6B6B;padding:3px 8px" onclick="deleteAssigned(${r.id})">🗑</button>
-      </div>
-    </div>`).join("");
-}
-async function deleteAssigned(id){await db.from("assigned_projects").delete().eq("id",id);loadAssigned();}
-
-async function addComment(){
-  const person=document.getElementById("cm-person").value;
-  const date=document.getElementById("cm-date").value;
-  const text=document.getElementById("cm-text").value.trim();
-  if(!person||!text){showToast("⚠️ Fill all fields","error");return;}
-  await db.from("comments").insert({date,person,manager:currentManager,comment:text});
-  showToast("💬 Comment sent!","success");
-  document.getElementById("cm-text").value="";
-  loadComments();
-}
-
-async function loadComments(){
-  const{data}=await db.from("comments").select("*").order("created_at",{ascending:false}).limit(50);
-  const rows=data||[];
-  const el=document.getElementById("comments-list");
-  if(rows.length===0){el.innerHTML=`<div style="padding:14px;font-size:11px;color:rgba(255,255,255,0.2)">No comments yet</div>`;return;}
-  el.innerHTML=rows.map(r=>`
-    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.04);display:flex;gap:10px">
-      <div style="flex:1"><span style="color:var(--org);font-weight:700;font-size:11px">${r.manager}</span> → <span style="color:#fff;font-weight:600;font-size:11px">${r.person}</span> <span style="color:rgba(255,255,255,0.3);font-size:9px">${r.date}</span>
-      <div style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:3px">${r.comment}</div></div>
-      <button class="btn btn-sm" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FF6B6B;padding:3px 8px;align-self:flex-start" onclick="deleteComment(${r.id})">🗑</button>
-    </div>`).join("");
-}
-async function deleteComment(id){await db.from("comments").delete().eq("id",id);loadComments();}
 
 // ── PERSON DETAIL ─────────────────────────────────────────────────────────────
 async function showDetail(person){
   const today=new Date().toISOString().split("T")[0];
   const{data:logs}=await db.from("daily_logs").select("*").eq("date",today).eq("person",person);
   const{data:comms}=await db.from("comments").select("*").eq("person",person).order("created_at",{ascending:false}).limit(5);
-  const rows=logs||[];
-  const targets=getTargets();
-  const team=TEAMS[memberTeam(person)];
+  const rows=logs||[];const targets=getTgts();
+  const team=TEAMS[memTeam(person)];
   const avgPct=rows.length>0?Math.round(rows.reduce((s,r)=>s+r.pct,0)/rows.length):0;
-
-  document.getElementById("modal-title").textContent=`📊 ${person} — Today`;
-  document.getElementById("modal-body").innerHTML=`
-    <div style="display:flex;gap:8px;margin-bottom:14px">
-      ${team?`<span style="padding:4px 12px;border-radius:10px;background:${team.color}20;color:${team.color};font-size:10px;font-weight:700">${team.emoji} Team ${team.name}</span>`:""}
-      <span style="padding:4px 12px;border-radius:10px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.5);font-size:10px">${rows.length} project(s)</span>
+  document.getElementById("det-title").textContent=`${person} — Today`;
+  document.getElementById("det-body").innerHTML=`
+    <div style="display:flex;gap:7px;margin-bottom:13px">
+      ${team?`<span style="padding:3px 10px;border-radius:8px;background:${team.color}18;color:${team.color};font-size:11px;font-weight:600">${team.emoji} Team ${team.name}</span>`:""}
+      <span style="padding:3px 10px;border-radius:8px;background:var(--sur2);color:var(--txt2);font-size:11px">${rows.length} project(s)</span>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:${avgPct>=80?"#4ADE80":avgPct>=50?"#EAB308":"#FF6B6B"}">${avgPct}%</div><div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">Avg Complete</div></div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:#4ADE80">${rows.reduce((s,r)=>s+(r.emails||0),0)}</div><div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">Total Emails</div></div>
-      <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:#3B82F6">${rows.reduce((s,r)=>s+(r.cold_call||0),0)}</div><div style="font-size:9px;color:rgba(255,255,255,0.35);margin-top:2px">Total Calls</div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:13px">
+      <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:11px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:${avgPct>=80?"var(--grn)":avgPct>=50?"var(--ylw)":"var(--red)"}">${avgPct}%</div><div style="font-size:9px;color:var(--txt3);margin-top:2px">Avg Complete</div></div>
+      <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:11px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:var(--grn)">${rows.reduce((s,r)=>s+(r.emails||0),0)}</div><div style="font-size:9px;color:var(--txt3);margin-top:2px">Total Emails</div></div>
+      <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:11px;text-align:center"><div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:900;color:var(--blu)">${rows.reduce((s,r)=>s+(r.cold_call||0),0)}</div><div style="font-size:9px;color:var(--txt3);margin-top:2px">Total Calls</div></div>
     </div>
-    ${rows.map(r=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#fff">[${r.priority}] ${r.project}</span><span style="font-family:'Syne',sans-serif;font-weight:900;color:${r.pct>=80?"#4ADE80":r.pct>=50?"#EAB308":"#FF6B6B"}">${r.pct}%</span></div>
-      <div style="display:flex;flex-direction:column;gap:2px">
-        ${ACTIONS.map(a=>{
-          const v=r[a.id]||0, t=targets[a.id]||a.target;
-          const notes=r.action_notes||{};
-          const note=notes[a.id]||"";
-          const color=v>=t?"#4ADE80":v>0?"#EAB308":"rgba(255,255,255,0.25)";
-          const icon=v>=t?"✅":v>0?"🟡":"❌";
-          const pct=Math.min(100,Math.round(v/t*100));
-          return`<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-            <div style="display:flex;align-items:center;gap:8px">
-              <span style="font-size:10px;width:16px;text-align:center;flex-shrink:0">${icon}</span>
-              <span style="font-size:12px;flex-shrink:0">${a.emoji}</span>
-              <span style="font-size:10px;color:rgba(255,255,255,0.65);flex:1">${a.name}</span>
-              <div style="width:50px;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;flex-shrink:0">
-                <div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div>
-              </div>
-              <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:${color};min-width:36px;text-align:right;flex-shrink:0">${v}/${t}</span>
-            </div>
-            ${note?`<div style="margin-top:3px;margin-left:24px;font-size:10px;color:#F7A200;font-style:italic">💬 "${note}"</div>`:""}
-          </div>`;
-        }).join("")}
+    ${rows.map(r=>`<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:9px;padding:11px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:6px"><span class="pb pb-${r.priority}">${r.priority}</span><span style="font-size:12px;font-weight:600;color:var(--txt)">${r.project}</span></div>
+        <span style="font-family:'Syne',sans-serif;font-weight:800;color:${r.pct>=80?"var(--grn)":r.pct>=50?"var(--ylw)":"var(--red)"}">${r.pct}%</span>
       </div>
+      ${ACTIONS.map(a=>{
+        const v=r[a.id]||0,t=targets[a.id]||a.target;
+        const notes=r.action_notes||{},note=notes[a.id]||"";
+        const color=v>=t?"var(--grn)":v>0?"var(--ylw)":"var(--txt3)";
+        const icon=v>=t?"✅":v>0||note?"🟡":"❌";
+        const pct=Math.min(100,Math.round(v/t*100));
+        return`<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="font-size:11px;width:16px;text-align:center;flex-shrink:0">${icon}</span>
+            <span style="font-size:12px;flex-shrink:0">${a.emoji}</span>
+            <span style="font-size:11px;color:var(--txt2);flex:1">${a.name}</span>
+            <div style="width:50px;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;flex-shrink:0"><div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div></div>
+            <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:${color};min-width:36px;text-align:right;flex-shrink:0">${v}/${t}</span>
+          </div>
+          ${note?`<div style="margin-top:3px;margin-left:23px;font-size:10px;color:var(--ylw);font-style:italic">💬 "${note}"</div>`:""}
+        </div>`;
+      }).join("")}
     </div>`).join("")}
-    <div style="margin-top:10px;display:flex;gap:8px">
-      <input class="finp" id="quick-comment" placeholder="Quick comment for ${person}…" style="flex:1"/>
-      <button class="btn btn-org btn-sm" onclick="quickComment('${person}')">Send</button>
+    <div style="margin-top:10px;display:flex;gap:7px">
+      <input class="finp" id="qcmt" placeholder="Quick comment for ${person}…" style="flex:1"/>
+      <button class="btn btn-org btn-sm" onclick="quickCmt('${person}')">Send</button>
     </div>
-    ${comms&&comms.length>0?`<div style="margin-top:10px"><div style="font-size:9px;color:rgba(255,255,255,0.3);margin-bottom:6px">RECENT COMMENTS</div>${comms.map(c=>`<div style="background:rgba(247,162,0,0.08);border:1px solid rgba(247,162,0,0.2);border-radius:7px;padding:7px;margin-bottom:5px;font-size:10px"><span style="color:var(--org);font-weight:600">${c.manager}:</span> ${c.comment} <span style="color:rgba(255,255,255,0.25);float:right">${c.date}</span></div>`).join("")}</div>`:""}`;
-  document.getElementById("detail-modal").style.display="flex";
+    ${comms&&comms.length>0?`<div style="margin-top:11px"><div style="font-size:10px;font-weight:600;color:var(--txt3);letter-spacing:.5px;text-transform:uppercase;margin-bottom:7px">Recent Comments</div>${comms.map(c=>`<div style="background:rgba(247,162,0,.06);border:1px solid rgba(247,162,0,.15);border-radius:7px;padding:8px;margin-bottom:5px"><span style="color:var(--org);font-weight:600;font-size:11px">${c.manager}:</span> <span style="color:var(--txt2);font-size:11px">${c.comment}</span> <span style="color:var(--txt3);font-size:9px;float:right">${c.date}</span></div>`).join("")}</div>`:""}`;
+  document.getElementById("det-modal").style.display="flex";
 }
 
-async function quickComment(person){
-  const text=document.getElementById("quick-comment")?.value.trim();
-  if(!text) return;
+async function quickCmt(person){
+  const text=document.getElementById("qcmt")?.value.trim();if(!text)return;
   const today=new Date().toISOString().split("T")[0];
-  await db.from("comments").insert({date:today,person,manager:currentManager,comment:text});
-  showToast("💬 Comment sent!","success");
-  showDetail(person);
+  await db.from("comments").insert({date:today,person,manager:currentMgr,comment:text});
+  showToast("💬 Comment sent!","success");showDetail(person);
 }
+
+// ── ASSIGN ────────────────────────────────────────────────────────────────────
+let selPeople=new Set();
+function renderPeopleSelector(){
+  const m=getMembers(),el=document.getElementById("people-sel");if(!el)return;
+  el.innerHTML=Object.entries(m).map(([tid,names])=>names.map(name=>{
+    const team=TEAMS[tid],sel=selPeople.has(name);
+    return`<div onclick="togglePerson('${name}')" id="pp-${name.replace(/\s/g,'_')}" style="display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:7px;cursor:pointer;border:1px solid ${sel?team.color+"60":"var(--bdr)"};background:${sel?team.color+"14":"var(--sur2)"};transition:all .15s;user-select:none">
+      <div style="width:5px;height:5px;border-radius:50%;background:${sel?team.color:"var(--txt3)"}"></div>
+      <span style="font-size:11px;color:${sel?"var(--txt)":"var(--txt2)"};font-weight:${sel?600:400}">${name}</span>
+    </div>`;
+  }).join("")).join("");
+  updateAssignPreview();
+}
+function togglePerson(n){if(selPeople.has(n))selPeople.delete(n);else selPeople.add(n);renderPeopleSelector();}
+function selAllPeople(){const m=getMembers();Object.values(m).flat().forEach(n=>selPeople.add(n));renderPeopleSelector();}
+function selTeamPeople(tid){const m=getMembers();(m[tid]||[]).forEach(n=>selPeople.add(n));renderPeopleSelector();}
+function clearPeople(){selPeople.clear();renderPeopleSelector();}
+function updateAssignPreview(){
+  const proj=document.getElementById("ap-proj")?.value.trim(),prio=document.getElementById("ap-prio")?.value||"P2";
+  const btn=document.getElementById("btn-assign"),prev=document.getElementById("ap-preview");
+  const n=selPeople.size;
+  if(n>0&&proj){prev.style.display="block";prev.innerHTML=`Assign <strong style="color:var(--org)">${proj}</strong> [${prio}] to <strong style="color:var(--org)">${n} person(s):</strong> ${[...selPeople].join(", ")}`;if(btn){btn.disabled=false;btn.style.opacity="1";}}
+  else{prev.style.display="none";if(btn){btn.disabled=true;btn.style.opacity=".45";}}
+}
+async function assignProject(){
+  const proj=document.getElementById("ap-proj").value.trim(),prio=document.getElementById("ap-prio").value;
+  const today=new Date().toISOString().split("T")[0];
+  if(selPeople.size===0||!proj){showToast("⚠️ Select people and enter project","error");return;}
+  const rows=[...selPeople].map(person=>({person,project:proj,priority:prio,date:today,assigned_by:currentMgr}));
+  const{error}=await db.from("assigned_projects").insert(rows);
+  if(error){showToast("⚠️ "+error.message,"error");return;}
+  showToast(`✅ Assigned to ${rows.length} people!`,"success");
+  document.getElementById("ap-proj").value="";selPeople.clear();renderPeopleSelector();loadAssigned();
+}
+async function loadAssigned(){
+  const today=new Date().toISOString().split("T")[0];
+  const{data}=await db.from("assigned_projects").select("*").eq("date",today).order("created_at",{ascending:false});
+  const rows=data||[];const el=document.getElementById("assigned-list");
+  if(rows.length===0){el.innerHTML=`<div style="padding:13px;font-size:11px;color:var(--txt3);font-style:italic">No assignments today</div>`;return;}
+  el.innerHTML=rows.map(r=>`<div style="padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;align-items:center;justify-content:space-between;gap:8px">
+    <div><div style="font-size:12px;font-weight:600;color:var(--txt)">${r.person}</div><div style="font-size:10px;color:var(--txt3);margin-top:1px">${r.project}</div></div>
+    <div style="display:flex;align-items:center;gap:6px"><span class="pb pb-${r.priority}">${r.priority}</span><span style="font-size:9px;color:var(--txt3)">by ${r.assigned_by}</span><button class="btn btn-sm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171" onclick="delAssigned(${r.id})">🗑</button></div>
+  </div>`).join("");
+}
+async function delAssigned(id){await db.from("assigned_projects").delete().eq("id",id);loadAssigned();}
+
+async function addComment(){
+  const person=document.getElementById("cm-person").value,date=document.getElementById("cm-date").value,text=document.getElementById("cm-text").value.trim();
+  if(!person||!text){showToast("⚠️ Fill all fields","error");return;}
+  await db.from("comments").insert({date,person,manager:currentMgr,comment:text});
+  showToast("💬 Comment sent!","success");document.getElementById("cm-text").value="";loadComments();
+}
+async function loadComments(){
+  const{data}=await db.from("comments").select("*").order("created_at",{ascending:false}).limit(50);
+  const rows=data||[];const el=document.getElementById("cmt-list");
+  if(rows.length===0){el.innerHTML=`<div style="padding:13px;font-size:11px;color:var(--txt3);font-style:italic">No comments yet</div>`;return;}
+  el.innerHTML=rows.map(r=>`<div style="padding:9px 13px;border-bottom:1px solid rgba(255,255,255,.04);display:flex;gap:9px">
+    <div style="flex:1"><span style="color:var(--org);font-weight:600;font-size:11px">${r.manager}</span> → <span style="font-weight:600;font-size:11px">${r.person}</span> <span style="color:var(--txt3);font-size:9px">${r.date}</span>
+    <div style="font-size:11px;color:var(--txt2);margin-top:2px;line-height:1.4">${r.comment}</div></div>
+    <button class="btn btn-sm" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171;align-self:flex-start" onclick="delCmt(${r.id})">🗑</button>
+  </div>`).join("");
+}
+async function delCmt(id){await db.from("comments").delete().eq("id",id);loadComments();}
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
-function renderTargetsForm(){
-  const targets=getTargets();
-  document.getElementById("targets-form").innerHTML=ACTIONS.map(a=>`
-    <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:13px;width:20px">${a.emoji}</span>
-      <span style="font-size:11px;color:rgba(255,255,255,0.6);flex:1">${a.name}</span>
-      <input type="number" min="0" value="${targets[a.id]||a.target}" id="tgt-${a.id}" style="width:56px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:4px 8px;font-family:'DM Mono',monospace;font-size:12px;color:var(--org);text-align:center;outline:none"/>
+function renderTgtForm(){
+  const t=getTgts();
+  document.getElementById("tgt-form").innerHTML=ACTIONS.map(a=>`<div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:13px;width:18px">${a.emoji}</span>
+    <span style="font-size:11px;color:var(--txt2);flex:1">${a.name}</span>
+    <input type="number" min="0" value="${t[a.id]||a.target}" id="tgt-${a.id}" style="width:54px;background:var(--sur2);border:1px solid var(--bdr);border-radius:6px;padding:4px 8px;font-size:12px;color:var(--org);text-align:center;outline:none"/>
+  </div>`).join("");
+}
+function saveTargets(){const t={};ACTIONS.forEach(a=>{t[a.id]=parseInt(document.getElementById(`tgt-${a.id}`)?.value)||a.target;});localStorage.setItem("atgt",JSON.stringify(t));showToast("✅ Targets saved!","success");}
+
+function renderMemList(){
+  const m=getMembers();
+  document.getElementById("mem-list").innerHTML=Object.entries(m).map(([tid,names])=>`
+    <div style="margin-bottom:9px"><div style="font-size:9px;font-weight:700;color:${TEAMS[tid]?.color};letter-spacing:.8px;text-transform:uppercase;margin-bottom:5px">${TEAMS[tid]?.emoji} Team ${tid.toUpperCase()}</div>
+    ${names.map(n=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04)">
+      <span style="font-size:11px;flex:1;color:var(--txt)">${n}</span>
+      <select onchange="moveMem('${n}','${tid}',this.value)" style="background:var(--sur2);border:1px solid var(--bdr);border-radius:5px;padding:2px 6px;font-size:10px;color:var(--txt);outline:none">
+        <option value="luis" ${tid==="luis"?"selected":""}>🟠 Luis</option>
+        <option value="taiki" ${tid==="taiki"?"selected":""}>🔵 Taiki</option>
+      </select>
+      <button onclick="removeMem('${n}','${tid}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171;border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer">🗑</button>
+    </div>`).join("")}
     </div>`).join("");
 }
-
-function saveTargets(){
-  const t={};ACTIONS.forEach(a=>{t[a.id]=parseInt(document.getElementById(`tgt-${a.id}`)?.value)||a.target;});
-  localStorage.setItem("arches_targets",JSON.stringify(t));
-  showToast("✅ Targets saved! Tracker will use new targets on next load.","success");
-}
-
-function renderMembersList(){
-  const members=getMembers();
-  document.getElementById("mem-list").innerHTML=Object.entries(members).map(([tid,names])=>`
-    <div style="margin-bottom:10px">
-      <div style="font-size:9px;color:${TEAMS[tid]?.color};font-weight:700;letter-spacing:1px;margin-bottom:5px">${TEAMS[tid]?.emoji} TEAM ${tid.toUpperCase()}</div>
-      ${names.map(n=>`<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-        <span style="font-size:11px;flex:1;color:#fff">${n}</span>
-        <select onchange="moveMember('${n}','${tid}',this.value)" style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:2px 6px;font-family:'DM Mono',monospace;font-size:10px;color:#fff">
-          <option value="luis" ${tid==="luis"?"selected":""}>🟠 Luis</option>
-          <option value="taiki" ${tid==="taiki"?"selected":""}>🔵 Taiki</option>
-        </select>
-        <button onclick="removeMember('${n}','${tid}')" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FF6B6B;border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer">🗑</button>
-      </div>`).join("")}
-    </div>`).join("");
-}
-
-function addMember(){
-  const name=document.getElementById("new-mem").value.trim();
-  const team=document.getElementById("new-mem-team").value;
-  if(!name){showToast("⚠️ Enter name","error");return;}
-  const m=getMembers();if(!m[team])m[team]=[];
-  if(m[team].includes(name)){showToast("⚠️ Already exists","error");return;}
-  m[team].push(name);localStorage.setItem("arches_members",JSON.stringify(m));
-  showToast(`✅ ${name} added!`,"success");document.getElementById("new-mem").value="";
-  renderMembersList();populateSelects();
-}
-function moveMember(name,from,to){if(from===to)return;const m=getMembers();m[from]=m[from].filter(n=>n!==name);if(!m[to])m[to]=[];m[to].push(name);localStorage.setItem("arches_members",JSON.stringify(m));showToast(`✅ Moved to Team ${to}!`,"success");renderMembersList();renderOverview();}
-function removeMember(name,team){if(!confirm(`Remove ${name}?`))return;const m=getMembers();m[team]=m[team].filter(n=>n!==name);localStorage.setItem("arches_members",JSON.stringify(m));showToast("Removed","info");renderMembersList();renderOverview();}
-function renderManagersList(){document.getElementById("mgr-list").innerHTML=getManagers().map((m,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)"><span style="font-size:11px;flex:1;color:#fff">${m.name}</span><span style="font-size:9px;color:rgba(255,255,255,0.3)">••••••••</span>${i>0?`<button onclick="removeManager(${i})" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FF6B6B;border-radius:5px;padding:2px 8px;font-size:10px;cursor:pointer">🗑</button>`:`<span style="font-size:9px;color:rgba(255,255,255,0.2)">owner</span>`}</div>`).join("");}
-function addManager(){const name=document.getElementById("new-mgr-n").value.trim(),pass=document.getElementById("new-mgr-p").value;if(!name||!pass){showToast("⚠️ Fill both","error");return;}const m=getManagers();m.push({name,pass});localStorage.setItem("arches_mgrs",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mgr-n").value="";document.getElementById("new-mgr-p").value="";renderManagersList();}
-function removeManager(i){const m=getManagers();m.splice(i,1);localStorage.setItem("arches_mgrs",JSON.stringify(m));renderManagersList();}
+function addMember(){const name=document.getElementById("new-mem").value.trim(),team=document.getElementById("new-mem-team").value;if(!name){showToast("⚠️ Enter name","error");return;}const m=getMembers();if(!m[team])m[team]=[];if(m[team].includes(name)){showToast("⚠️ Already exists","error");return;}m[team].push(name);localStorage.setItem("amem",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mem").value="";renderMemList();populateSels();renderPeopleSelector();}
+function moveMem(n,from,to){if(from===to)return;const m=getMembers();m[from]=m[from].filter(x=>x!==n);if(!m[to])m[to]=[];m[to].push(n);localStorage.setItem("amem",JSON.stringify(m));showToast(`✅ Moved!`,"success");renderMemList();renderOverview();}
+function removeMem(n,team){if(!confirm(`Remove ${n}?`))return;const m=getMembers();m[team]=m[team].filter(x=>x!==n);localStorage.setItem("amem",JSON.stringify(m));showToast("Removed","info");renderMemList();renderOverview();}
+function renderMgrList(){document.getElementById("mgr-list").innerHTML=getMgrs().map((m,i)=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font-size:11px;flex:1;color:var(--txt)">${m.name}</span><span style="font-size:9px;color:var(--txt3)">••••••</span>${i>0?`<button onclick="removeMgr(${i})" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171;border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer">🗑</button>`:`<span style="font-size:9px;color:var(--txt3)">owner</span>`}</div>`).join("");}
+function addManager(){const name=document.getElementById("new-mgr-n").value.trim(),pass=document.getElementById("new-mgr-p").value;if(!name||!pass){showToast("⚠️ Fill both","error");return;}const m=getMgrs();m.push({name,pass});localStorage.setItem("am",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mgr-n").value="";document.getElementById("new-mgr-p").value="";renderMgrList();}
+function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",JSON.stringify(m));renderMgrList();}
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
 function exportExcel(){
@@ -762,21 +706,17 @@ function exportExcel(){
   const rows=todayLogs.map(r=>[r.date,r.person,r.team_id||"",r.project,r.priority,...ACTIONS.map(a=>r[a.id]||0),r.actions_done,r.pct+"%"]);
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
+  ws["!cols"]=h.map((_,i)=>({wch:i<5?16:8}));
   XLSX.utils.book_append_sheet(wb,"Today",ws);
   XLSX.writeFile(wb,`arches-${new Date().toISOString().split("T")[0]}.xlsx`);
   showToast("⬇ Excel exported!","success");
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
-function populateSelects(){
-  const members=allMembers();
-  ["ap-person","cm-person"].forEach(id=>{
-    const sel=document.getElementById(id);if(!sel)return;
-    sel.innerHTML="<option value=''>Select…</option>";
-    members.forEach(m=>{const o=document.createElement("option");o.value=m;o.textContent=m;sel.appendChild(o);});
-  });
-  const histSel=document.getElementById("hist-person");
-  if(histSel){histSel.innerHTML="<option value=''>All People</option>";members.forEach(m=>{const o=document.createElement("option");o.value=m;o.textContent=m;histSel.appendChild(o);});}
+function populateSels(){
+  const mems=allMems();
+  ["cm-person"].forEach(id=>{const s=document.getElementById(id);if(!s)return;s.innerHTML="<option value=''>Select…</option>";mems.forEach(m=>{const o=document.createElement("option");o.value=m;o.textContent=m;s.appendChild(o);});});
+  const hs=document.getElementById("hperson");if(hs){hs.innerHTML="<option value=''>All People</option>";mems.forEach(m=>{const o=document.createElement("option");o.value=m;o.textContent=m;hs.appendChild(o);});}
 }
 
 function showPage(page,btn){
@@ -785,16 +725,16 @@ function showPage(page,btn){
   document.getElementById(`page-${page}`).classList.add("active");
   if(btn)btn.classList.add("active");
   if(page==="performance")renderPerf();
-  if(page==="history"){const today=new Date().toISOString().split("T")[0];document.getElementById("hist-from").value=today;document.getElementById("hist-to").value=today;loadHistory();}
-  if(page==="settings"){renderTargetsForm();renderMembersList();renderManagersList();}
+  if(page==="history"){const today=new Date().toISOString().split("T")[0];document.getElementById("hfrom").value=today;document.getElementById("hto").value=today;loadHistory();}
+  if(page==="settings"){renderTgtForm();renderMemList();renderMgrList();}
   if(page==="assign"){loadAssigned();loadComments();renderPeopleSelector();}
 }
 
 function showToast(msg,type="info"){
   const t=document.getElementById("toast");
-  t.style.background=type==="success"?"linear-gradient(135deg,#16A34A,#15803D)":type==="error"?"linear-gradient(135deg,#DC2626,#B91C1C)":"linear-gradient(135deg,#1E2240,#111320)";
-  t.style.color="#fff";t.style.boxShadow="0 6px 24px rgba(0,0,0,0.5)";
-  t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),4500);
+  t.style.background=type==="success"?"linear-gradient(135deg,#16A34A,#15803D)":type==="error"?"linear-gradient(135deg,#DC2626,#B91C1C)":"var(--sur2)";
+  t.style.color="#fff";t.style.border="1px solid rgba(255,255,255,.1)";
+  t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),4000);
 }
 
 checkSession();
