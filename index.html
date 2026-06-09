@@ -56,6 +56,9 @@ body{background:var(--bg);color:#fff;font-family:'DM Mono',monospace;min-height:
 .modal-box{background:var(--sur);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:560px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.8);max-height:85vh;overflow-y:auto}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:live 2s infinite;display:inline-block}
 .new-badge{animation:slideIn 0.4s ease;background:rgba(22,163,74,0.15);border:1px solid rgba(22,163,74,0.3);border-radius:6px}
+.tip{position:relative;cursor:default}
+.tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1E2240;color:#fff;font-size:9px;font-family:'DM Mono',monospace;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity 0.2s;border:1px solid rgba(255,255,255,0.1);z-index:100}
+.tip:hover::after{opacity:1}
 #toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);border-radius:10px;padding:10px 20px;font-size:12px;font-weight:600;opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #gbar{height:2px;background:var(--bdr)}
@@ -414,7 +417,7 @@ function renderOverview(){
       const v=r[id]||0, t=ATGT[id]||1;
       if(v===0) return "";
       const done=v>=t;
-      return `<span style="font-size:9px;padding:2px 6px;border-radius:6px;background:${done?"rgba(22,163,74,0.15)":"rgba(234,179,8,0.15)"};color:${done?"#4ADE80":"#EAB308"};border:1px solid ${done?"rgba(22,163,74,0.25)":"rgba(234,179,8,0.25)"}">${emoji} ${v}</span>`;
+      return `<span class="tip" data-tip="${Object.keys(AMAP).find(k=>AMAP[k]===emoji)||id}: ${v}/${t}" style="font-size:9px;padding:2px 6px;border-radius:6px;background:${done?"rgba(22,163,74,0.15)":"rgba(234,179,8,0.15)"};color:${done?"#4ADE80":"#EAB308"};border:1px solid ${done?"rgba(22,163,74,0.25)":"rgba(234,179,8,0.25)"}">${emoji} ${v}</span>`;
     }).filter(Boolean).join(" ");
 
     return `<div onclick="showDetail('${r.person}')" style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(247,162,0,0.04)'" onmouseout="this.style.background='transparent'">
@@ -474,7 +477,7 @@ function renderPerf(){
   if(people.length===0){el.innerHTML=`<div style="padding:30px;text-align:center;color:rgba(255,255,255,0.3)">No data yet today</div>`;return;}
   const targets=getTargets();
   el.innerHTML=`<div class="card"><div class="card-head"><span class="card-title">📈 Today's Performance Ranking</span></div><div style="overflow-x:auto"><table class="atbl">
-    <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Avg%</th><th>Bar</th>${ACTIONS.map(a=>`<th>${a.emoji}</th>`).join("")}</tr></thead>
+    <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Avg%</th><th>Bar</th>${ACTIONS.map(a=>`<th class="tip" data-tip="${a.name}">${a.emoji}</th>`).join("")}</tr></thead>
     <tbody>${people.map((p,i)=>{
       const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
       const color=avg>=80?"#4ADE80":avg>=50?"#EAB308":"#FF6B6B";
@@ -514,7 +517,7 @@ async function loadHistory(){
       <td>${team?`<span style="font-size:9px;padding:1px 5px;border-radius:6px;background:${team.color}20;color:${team.color}">${team.emoji}</span>`:"—"}</td>
       <td style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.project}</td>
       <td><span style="font-size:9px;padding:1px 5px;border-radius:5px;background:rgba(247,162,0,0.15);color:var(--org)">${r.priority}</span></td>
-      ${ACTIONS.map(a=>{const v=r[a.id]||0;const t=targets[a.id]||a.target;return`<td style="color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.25)"}">${v}</td>`;}).join("")}
+      ${ACTIONS.map(a=>{const v=r[a.id]||0;const t=targets[a.id]||a.target;return`<td class="tip" data-tip="${a.name}: ${v}/${t}"  style="color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.25)"}">${v}</td>`;}).join("")}
       <td>${r.actions_done}</td>
       <td style="font-family:'Syne',sans-serif;font-weight:900;color:${color}">${r.pct}%</td>
       <td><button class="btn btn-sm" style="background:rgba(220,38,38,0.15);border:1px solid rgba(220,38,38,0.3);color:#FF6B6B;padding:3px 8px" onclick="deleteLog(${r.id})">🗑</button></td>
@@ -663,7 +666,7 @@ async function showDetail(person){
     </div>
     ${rows.map(r=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#fff">[${r.priority}] ${r.project}</span><span style="font-family:'Syne',sans-serif;font-weight:900;color:${r.pct>=80?"#4ADE80":r.pct>=50?"#EAB308":"#FF6B6B"}">${r.pct}%</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">${ACTIONS.map(a=>{const v=r[a.id]||0;const t=targets[a.id]||a.target;return`<div style="font-size:9px;color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.3)"}">${a.emoji} ${v}/${t}</div>`;}).join("")}</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">${ACTIONS.map(a=>{const v=r[a.id]||0;const t=targets[a.id]||a.target;return`<div class="tip" data-tip="${a.name}" style="font-size:9px;color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.3)"}">${a.emoji} ${v}/${t}</div>`;}).join("")}</div>
     </div>`).join("")}
     <div style="margin-top:10px;display:flex;gap:8px">
       <input class="finp" id="quick-comment" placeholder="Quick comment for ${person}…" style="flex:1"/>
