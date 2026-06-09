@@ -361,20 +361,58 @@ function renderOverview(){
   renderTeam("luis","luis-rows","luis-avg","#F7A200");
   renderTeam("taiki","taiki-rows","taiki-avg","#3B82F6");
 
-  // Feed
+  // Feed — show latest activity per person+project
   const feed=document.getElementById("feed");
-  document.getElementById("feed-count").textContent=`${todayLogs.length} records`;
-  if(todayLogs.length===0){feed.innerHTML=`<div style="padding:20px;text-align:center;font-size:11px;color:rgba(255,255,255,0.25)">No data yet — waiting for team to log actions</div>`;return;}
-  feed.innerHTML=todayLogs.slice(0,30).map(r=>{
+  document.getElementById("feed-count").textContent=`${todayLogs.length} updates`;
+  if(todayLogs.length===0){
+    feed.innerHTML=`<div style="padding:24px;text-align:center;font-size:11px;color:rgba(255,255,255,0.25)">No activity yet — team is working… 🔄</div>`;
+    return;
+  }
+
+  // Group by person — show latest per person
+  const byPerson={};
+  todayLogs.forEach(r=>{
+    const key=r.person;
+    if(!byPerson[key]||new Date(r.created_at)>new Date(byPerson[key].created_at)) byPerson[key]=r;
+  });
+
+  // Build action highlights for each person
+  const AMAP={db_search:"🗄️",li_search:"🔍",expansion:"📈",cold_call:"📞",connections:"🔗",inmail:"💼",emails:"📧",sms:"💬",company_call:"🏢",proposals:"🤝",int_sched:"🎙️",int_done:"📅",other:"⚡"};
+  const ATGT={db_search:1,li_search:25,expansion:60,cold_call:20,connections:25,inmail:10,emails:40,sms:15,company_call:1,proposals:3,int_sched:2,int_done:1,other:1};
+
+  // Sort by most recent
+  const sorted=Object.values(byPerson).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at));
+
+  feed.innerHTML=sorted.map(r=>{
     const team=TEAMS[r.team_id];
     const color=r.pct>=80?"#4ADE80":r.pct>=50?"#EAB308":"#FF6B6B";
-    return `<div class="prow" onclick="showDetail('${r.person}')" style="grid-template-columns:150px 90px 1fr 60px 80px 80px">
-      <div><div style="font-size:11px;font-weight:600;color:#fff">${r.person}</div><div style="font-size:9px;color:rgba(255,255,255,0.3)">${new Date(r.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}</div></div>
-      <div style="font-size:9px;padding:2px 7px;border-radius:8px;background:${team?team.color+"20":"rgba(255,255,255,0.06)"};color:${team?team.color:"rgba(255,255,255,0.4)"};font-weight:700">${team?team.emoji+" "+team.name:"—"}</div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.project}</div>
-      <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden"><div style="height:100%;width:${r.pct}%;background:${color}"></div></div>
-      <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:900;color:${color}">${r.pct}%</div>
-      <button class="btn btn-ghost btn-sm">Detail</button>
+    const time=new Date(r.created_at).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+
+    // Show action counts as mini pills
+    const actionPills=Object.entries(AMAP).map(([id,emoji])=>{
+      const v=r[id]||0, t=ATGT[id]||1;
+      if(v===0) return "";
+      const done=v>=t;
+      return `<span style="font-size:9px;padding:2px 6px;border-radius:6px;background:${done?"rgba(22,163,74,0.15)":"rgba(234,179,8,0.15)"};color:${done?"#4ADE80":"#EAB308"};border:1px solid ${done?"rgba(22,163,74,0.25)":"rgba(234,179,8,0.25)"}">${emoji} ${v}</span>`;
+    }).filter(Boolean).join(" ");
+
+    return `<div onclick="showDetail('${r.person}')" style="padding:10px 16px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(247,162,0,0.04)'" onmouseout="this.style.background='transparent'">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div style="width:7px;height:7px;border-radius:50%;background:#4ADE80;box-shadow:0 0 6px #4ADE80;flex-shrink:0"></div>
+          <span style="font-size:12px;font-weight:700;color:#fff">${r.person}</span>
+          ${team?`<span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${team.color}20;color:${team.color};font-weight:700">${team.emoji} ${team.name}</span>`:""}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-family:'Syne',sans-serif;font-size:14px;font-weight:900;color:${color}">${r.pct}%</span>
+          <span style="font-size:9px;color:rgba(255,255,255,0.3)">${time}</span>
+        </div>
+      </div>
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${r.project}</div>
+      <div style="height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${r.pct}%;background:${color};border-radius:2px;transition:width 0.5s"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${actionPills||'<span style="font-size:9px;color:rgba(255,255,255,0.2);font-style:italic">No actions logged yet</span>'}</div>
     </div>`;
   }).join("");
 }
