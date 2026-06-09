@@ -666,7 +666,28 @@ async function showDetail(person){
     </div>
     ${rows.map(r=>`<div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:8px;padding:12px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px"><span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:#fff">[${r.priority}] ${r.project}</span><span style="font-family:'Syne',sans-serif;font-weight:900;color:${r.pct>=80?"#4ADE80":r.pct>=50?"#EAB308":"#FF6B6B"}">${r.pct}%</span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px">${ACTIONS.map(a=>{const v=r[a.id]||0;const t=targets[a.id]||a.target;return`<div class="tip" data-tip="${a.name}" style="font-size:9px;color:${v>=t?"#4ADE80":v>0?"#F7A200":"rgba(255,255,255,0.3)"}">${a.emoji} ${v}/${t}</div>`;}).join("")}</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        ${ACTIONS.map(a=>{
+          const v=r[a.id]||0, t=targets[a.id]||a.target;
+          const notes=r.action_notes||{};
+          const note=notes[a.id]||"";
+          const color=v>=t?"#4ADE80":v>0?"#EAB308":"rgba(255,255,255,0.25)";
+          const icon=v>=t?"✅":v>0?"🟡":"❌";
+          const pct=Math.min(100,Math.round(v/t*100));
+          return`<div style="padding:5px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:10px;width:16px;text-align:center;flex-shrink:0">${icon}</span>
+              <span style="font-size:12px;flex-shrink:0">${a.emoji}</span>
+              <span style="font-size:10px;color:rgba(255,255,255,0.65);flex:1">${a.name}</span>
+              <div style="width:50px;height:3px;background:rgba(255,255,255,0.06);border-radius:2px;overflow:hidden;flex-shrink:0">
+                <div style="height:100%;width:${pct}%;background:${color};border-radius:2px"></div>
+              </div>
+              <span style="font-family:'Syne',sans-serif;font-size:11px;font-weight:700;color:${color};min-width:36px;text-align:right;flex-shrink:0">${v}/${t}</span>
+            </div>
+            ${note?`<div style="margin-top:3px;margin-left:24px;font-size:10px;color:#F7A200;font-style:italic">💬 "${note}"</div>`:""}
+          </div>`;
+        }).join("")}
+      </div>
     </div>`).join("")}
     <div style="margin-top:10px;display:flex;gap:8px">
       <input class="finp" id="quick-comment" placeholder="Quick comment for ${person}…" style="flex:1"/>
