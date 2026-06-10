@@ -67,6 +67,8 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
 .tip::after{content:attr(data-tip);position:absolute;bottom:calc(100% + 5px);left:50%;transform:translateX(-50%);background:var(--sur2);color:var(--txt);font-size:10px;padding:4px 8px;border-radius:6px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .2s;border:1px solid var(--bdr);z-index:100;font-family:'Inter',sans-serif}
 .tip:hover::after{opacity:1}
 .alert-row{background:rgba(239,68,68,.06);border-left:3px solid var(--red);padding:8px 12px;border-radius:0 7px 7px 0;margin-bottom:6px;display:flex;align-items:center;gap:10px;font-size:11px}
+.excel-opt{display:block;width:100%;background:transparent;border:none;border-radius:7px;padding:7px 10px;font-size:11px;font-weight:500;color:var(--txt2);cursor:pointer;text-align:left;transition:all .15s}
+.excel-opt:hover{background:rgba(247,162,0,.1);color:var(--org)}
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(16px);border-radius:10px;padding:9px 18px;font-size:12px;font-weight:600;opacity:0;transition:all .3s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:0 6px 20px rgba(0,0,0,.5)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #gbar{height:2px;background:var(--bdr)}
@@ -126,7 +128,19 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
     </div>
     <span id="lupd" style="font-size:9px;color:var(--txt3)"></span>
     <span id="hmgr" style="font-size:11px;color:var(--txt2)"></span>
-    <button class="btn btn-org btn-sm" onclick="exportExcel()">⬇ Excel</button>
+    <div style="position:relative;display:inline-block" id="excel-wrap">
+      <button class="btn btn-org btn-sm" onclick="toggleExcelMenu()">⬇ Excel ▾</button>
+      <div id="excel-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:6px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:100;animation:fadeIn .2s ease">
+        <div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;padding:4px 8px 6px">Export Options</div>
+        <button onclick="exportExcelOpt('today-general')" class="excel-opt">📊 Today — General</button>
+        <button onclick="exportExcelOpt('today-person')" class="excel-opt">👤 Today — By Person</button>
+        <button onclick="exportExcelOpt('today-project')" class="excel-opt">📁 Today — By Project</button>
+        <button onclick="exportExcelOpt('today-team')" class="excel-opt">👥 Today — By Team</button>
+        <div style="height:1px;background:var(--bdr);margin:4px 0"></div>
+        <button onclick="exportExcelOpt('week')" class="excel-opt">📅 This Week</button>
+        <button onclick="exportExcelOpt('month')" class="excel-opt">🗓 This Month</button>
+      </div>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">↩ Logout</button>
   </div>
 </div>
@@ -186,7 +200,19 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
       <div style="overflow-x:auto">
         <table class="atbl">
           <thead><tr><th>Date</th><th>Person</th><th>Team</th><th>Project</th><th>P</th>
-            ${['🗄️','🔍','📈','📞','🔗','💼','📧','💬','🏢','🤝','🎙️','📅','⚡'].map((e,i)=>`<th class="tip" data-tip="${['DB Search','LI Search','Expansion','Cold Call','Connections','InMail','Emails','SMS','Co.Call','Proposals','Int.Sched','Int.Done','Other'][i]}">${e}</th>`).join('')}
+            <th class="tip" data-tip="DB Search">🗄️</th>
+            <th class="tip" data-tip="LinkedIn Search">🔍</th>
+            <th class="tip" data-tip="Expansion">📈</th>
+            <th class="tip" data-tip="Cold Call">📞</th>
+            <th class="tip" data-tip="Connections">🔗</th>
+            <th class="tip" data-tip="InMail">💼</th>
+            <th class="tip" data-tip="Emails">📧</th>
+            <th class="tip" data-tip="SMS">💬</th>
+            <th class="tip" data-tip="Company Call">🏢</th>
+            <th class="tip" data-tip="Proposals">🤝</th>
+            <th class="tip" data-tip="Int. Scheduled">🎙️</th>
+            <th class="tip" data-tip="Int. Done">📅</th>
+            <th class="tip" data-tip="Other">⚡</th>
             <th>Done</th><th>%</th><th></th></tr></thead>
           <tbody id="hbody"></tbody>
         </table>
@@ -286,6 +312,18 @@ const SUPA_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const {createClient}=supabase;
 const db=createClient(SUPA_URL,SUPA_KEY);
 
+// Dashboard shows full code a112321_oliverwyman — strip pjt_ only
+function dispName(name){
+  if(!name) return "";
+  return name.startsWith("pjt_") ? name.slice(4) : name;
+}
+// Tracker display strips code too: oliverwyman_us_service_automation
+function shortName(name){
+  if(!name) return "";
+  let n = name.startsWith("pjt_") ? name.slice(4) : name;
+  return n.replace(/^[a-zA-Z]\d+_/, "");
+}
+
 const TEAMS={luis:{name:"Luis",emoji:"🟠",color:"#F7A200"},taiki:{name:"Taiki",emoji:"🔵",color:"#3B82F6"}};
 const ACTIONS=[
   {id:"db_search",emoji:"🗄️",name:"DB Search",target:1},
@@ -303,7 +341,7 @@ const ACTIONS=[
   {id:"other",emoji:"⚡",name:"Other",target:1},
 ];
 
-const DEFAULT_MANAGERS=[{name:"Luis",pass:"Arches2026"},{name:"Taiki",pass:"Arches2026"},{name:"Admin",pass:"Arches2026"}];
+const DEFAULT_MANAGERS=[{name:"Valentin Alvarez",pass:"Arches2026"},{name:"Luis",pass:"Arches2026"},{name:"Taiki",pass:"Arches2026"},{name:"Admin",pass:"Arches2026"}];
 const DEFAULT_MEMBERS={
   luis:["Sergio Barcia","Valentin Alvarez","Mariale Bustamante","JuanFer Mora","Julian Castellanos","Martin Perez","Nicolas Silva","Sebastian Guzman","Shadia Said"],
   taiki:["Andres Rodriguez","Majo Villalba","MariaP Puerto","JuanPa Leon","Nicolas Rosero","Lala Phan","Thomas Botto"]
@@ -376,9 +414,11 @@ function renderOverview(){
     <div class="stat"><div class="sv">${totalEmails}</div><div class="sl">Total Emails</div></div>
     <div class="stat"><div class="sv">${totalCalls}</div><div class="sl">Total Calls</div></div>`;
 
-  // Alerts — people with no activity for 2+ hours
+  // Alerts — only between 9am and 5:30pm
   const now=Date.now();
-  const alerts=allMems().filter(m=>{
+  const nowHour=new Date().getHours()+(new Date().getMinutes()/60);
+  const workingHours=nowHour>=9&&nowHour<=17.5;
+  const alerts=!workingHours?[]:allMems().filter(m=>{
     const mLogs=todayLogs.filter(r=>r.person===m);
     if(mLogs.length===0) return false;
     const latest=Math.max(...mLogs.map(r=>new Date(r.created_at).getTime()));
@@ -434,7 +474,7 @@ function renderOverview(){
           <span style="font-size:9px;color:var(--txt3)">${time}</span>
         </div>
       </div>
-      <div style="font-size:10px;color:var(--txt3);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${r.project}</div>
+      <div class="tip" data-tip="${r.project}" style="font-size:10px;color:var(--txt3);margin-bottom:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📁 ${dispName(r.project)}</div>
       <div style="height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:6px">
         <div style="height:100%;width:${r.pct}%;background:${color};border-radius:2px;transition:width .5s"></div>
       </div>
@@ -455,7 +495,8 @@ function renderTeam(tid,listId,avgId,color){
     const has=ml.length>0;
     const c=mp>=80?"var(--grn)":mp>=50?"var(--ylw)":has?"var(--red)":"var(--txt3)";
     const now=Date.now();
-    const inactive=has&&(now-Math.max(...ml.map(r=>new Date(r.created_at).getTime())))>2*3600000;
+    const nowH2=new Date().getHours()+(new Date().getMinutes()/60);
+    const inactive=has&&nowH2>=9&&nowH2<=17.5&&(now-Math.max(...ml.map(r=>new Date(r.created_at).getTime())))>2*3600000;
     return`<div class="prow" onclick="showDetail('${m}')" style="grid-template-columns:150px 48px 1fr 75px 10px">
       <div><div style="font-size:12px;font-weight:600;color:var(--txt)">${m}</div><div style="font-size:10px;color:var(--txt3)">${has?ml.length+" project(s)":"No data yet"}${inactive?" · ⚠️ inactive":""}</div></div>
       <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:${c}">${has?mp+"%":"—"}</div>
@@ -535,7 +576,7 @@ async function loadHistory(){
       <td style="color:var(--txt3)">${r.date}</td>
       <td style="font-weight:600;color:var(--txt);cursor:pointer" onclick="showDetail('${r.person}')">${r.person}</td>
       <td>${team?`<span style="font-size:9px;padding:1px 5px;border-radius:5px;background:${team.color}18;color:${team.color}">${team.emoji}</span>`:"—"}</td>
-      <td style="font-size:10px;color:var(--txt2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.project}</td>
+      <td class="tip" data-tip="${r.project}" style="font-size:10px;color:var(--txt2);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dispName(r.project)}</td>
       <td><span class="pb pb-${r.priority}">${r.priority}</span></td>
       ${ACTIONS.map(a=>{const v=r[a.id]||0,t=targets[a.id]||a.target;return`<td class="tip" data-tip="${a.name}: ${v}/${t}" style="color:${v>=t?"var(--grn)":v>0?"var(--org)":"var(--txt3)"}">${v}</td>`;}).join("")}
       <td>${r.actions_done}</td>
@@ -567,7 +608,7 @@ async function showDetail(person){
     </div>
     ${rows.map(r=>`<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:9px;padding:11px;margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div style="display:flex;align-items:center;gap:6px"><span class="pb pb-${r.priority}">${r.priority}</span><span style="font-size:12px;font-weight:600;color:var(--txt)">${r.project}</span></div>
+        <div style="display:flex;align-items:center;gap:6px"><span class="pb pb-${r.priority}">${r.priority}</span><span class="tip" data-tip="${r.project}" style="font-size:12px;font-weight:600;color:var(--txt)">${dispName(r.project)}</span></div>
         <span style="font-family:'Syne',sans-serif;font-weight:800;color:${r.pct>=80?"var(--grn)":r.pct>=50?"var(--ylw)":"var(--red)"}">${r.pct}%</span>
       </div>
       ${ACTIONS.map(a=>{
@@ -693,23 +734,112 @@ function renderMemList(){
     </div>`).join("");
 }
 function addMember(){const name=document.getElementById("new-mem").value.trim(),team=document.getElementById("new-mem-team").value;if(!name){showToast("⚠️ Enter name","error");return;}const m=getMembers();if(!m[team])m[team]=[];if(m[team].includes(name)){showToast("⚠️ Already exists","error");return;}m[team].push(name);localStorage.setItem("amem",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mem").value="";renderMemList();populateSels();renderPeopleSelector();}
-function moveMem(n,from,to){if(from===to)return;const m=getMembers();m[from]=m[from].filter(x=>x!==n);if(!m[to])m[to]=[];m[to].push(n);localStorage.setItem("amem",JSON.stringify(m));showToast(`✅ Moved!`,"success");renderMemList();renderOverview();}
+async function moveMem(n,from,to){
+  if(from===to)return;
+  const m=getMembers();
+  m[from]=m[from].filter(x=>x!==n);
+  if(!m[to])m[to]=[];m[to].push(n);
+  localStorage.setItem("amem",JSON.stringify(m));
+  // Also update Supabase so tracker reflects the change
+  await db.from("members").update({team_id:to}).eq("name",n).catch(()=>{});
+  showToast(`✅ ${n} moved to Team ${to}!`,"success");
+  renderMemList();renderOverview();renderPeopleSelector();
+}
 function removeMem(n,team){if(!confirm(`Remove ${n}?`))return;const m=getMembers();m[team]=m[team].filter(x=>x!==n);localStorage.setItem("amem",JSON.stringify(m));showToast("Removed","info");renderMemList();renderOverview();}
 function renderMgrList(){document.getElementById("mgr-list").innerHTML=getMgrs().map((m,i)=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font-size:11px;flex:1;color:var(--txt)">${m.name}</span><span style="font-size:9px;color:var(--txt3)">••••••</span>${i>0?`<button onclick="removeMgr(${i})" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171;border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer">🗑</button>`:`<span style="font-size:9px;color:var(--txt3)">owner</span>`}</div>`).join("");}
 function addManager(){const name=document.getElementById("new-mgr-n").value.trim(),pass=document.getElementById("new-mgr-p").value;if(!name||!pass){showToast("⚠️ Fill both","error");return;}const m=getMgrs();m.push({name,pass});localStorage.setItem("am",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mgr-n").value="";document.getElementById("new-mgr-p").value="";renderMgrList();}
 function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",JSON.stringify(m));renderMgrList();}
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-function exportExcel(){
-  if(todayLogs.length===0){showToast("⚠️ No data","error");return;}
-  const h=["Date","Person","Team","Project","Priority",...ACTIONS.map(a=>a.name),"Done","%"];
-  const rows=todayLogs.map(r=>[r.date,r.person,r.team_id||"",r.project,r.priority,...ACTIONS.map(a=>r[a.id]||0),r.actions_done,r.pct+"%"]);
+function toggleExcelMenu(){
+  const m=document.getElementById("excel-menu");
+  m.style.display=m.style.display==="none"?"block":"none";
+  if(m.style.display==="block"){
+    const close=(e)=>{ if(!document.getElementById("excel-wrap").contains(e.target)){m.style.display="none";document.removeEventListener("click",close);} };
+    setTimeout(()=>document.addEventListener("click",close),100);
+  }
+}
+
+async function exportExcelOpt(type){
+  document.getElementById("excel-menu").style.display="none";
+  const today=new Date().toISOString().split("T")[0];
+  let rows=todayLogs, dateLabel=today, sheetTitle="Today";
+
+  if(type==="week"||type==="month"){
+    const from=new Date();
+    if(type==="week")from.setDate(from.getDate()-7);
+    else from.setDate(1); // first of month
+    const{data}=await db.from("daily_logs").select("*").gte("date",from.toISOString().split("T")[0]).lte("date",today).order("date",{ascending:false});
+    rows=data||[]; sheetTitle=type==="week"?"This Week":"This Month"; dateLabel=type;
+  }
+
+  if(rows.length===0){showToast("⚠️ No data for this period","error");return;}
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet([h,...rows]);
-  ws["!cols"]=h.map((_,i)=>({wch:i<5?16:8}));
-  XLSX.utils.book_append_sheet(wb,"Today",ws);
-  XLSX.writeFile(wb,`arches-${new Date().toISOString().split("T")[0]}.xlsx`);
-  showToast("⬇ Excel exported!","success");
+  const targets=getTgts();
+
+  const baseHeaders=["Date","Person","Team","Project (Full Code)","Project (Display)","Priority",...ACTIONS.map(a=>a.name),"Actions Done","% Complete"];
+  const baseRows=rows.map(r=>[r.date,r.person,r.team_id||"",r.project,dispName(r.project),r.priority,...ACTIONS.map(a=>r[a.id]||0),r.actions_done,r.pct+"%"]);
+
+  function styleSheet(ws){
+    ws["!cols"]=baseHeaders.map((_,i)=>({wch:i===3?30:i===4?24:i<6?14:8}));
+    return ws;
+  }
+
+  if(type==="today-general"||type==="week"||type==="month"){
+    const ws=XLSX.utils.aoa_to_sheet([baseHeaders,...baseRows]);
+    styleSheet(ws);
+    XLSX.utils.book_append_sheet(wb,sheetTitle,ws);
+  }
+
+  if(type==="today-person"||type==="week"||type==="month"){
+    // By person — one row per person with totals
+    const byP={};
+    rows.forEach(r=>{
+      if(!byP[r.person])byP[r.person]={person:r.person,team:r.team_id||"",reports:0,pcts:[],totals:{}};
+      byP[r.person].reports++;byP[r.person].pcts.push(r.pct);
+      ACTIONS.forEach(a=>{byP[r.person].totals[a.id]=(byP[r.person].totals[a.id]||0)+(r[a.id]||0);});
+    });
+    const ph=["Person","Team","Reports","Avg %",...ACTIONS.map(a=>a.name)];
+    const pd=Object.values(byP).sort((a,b)=>{const aa=a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length,bb=b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length;return bb-aa;}).map(p=>[p.person,p.team,p.reports,Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length)+"%",...ACTIONS.map(a=>p.totals[a.id]||0)]);
+    const ws2=XLSX.utils.aoa_to_sheet([ph,...pd]);
+    ws2["!cols"]=ph.map((_,i)=>({wch:i<3?16:8}));
+    XLSX.utils.book_append_sheet(wb,"By Person",ws2);
+  }
+
+  if(type==="today-project"||type==="week"||type==="month"){
+    // By project
+    const byProj={};
+    rows.forEach(r=>{
+      const key=r.project;
+      if(!byProj[key])byProj[key]={project:r.project,display:dispName(r.project),team:r.team_id||"",people:new Set(),totals:{}};
+      byProj[key].people.add(r.person);
+      ACTIONS.forEach(a=>{byProj[key].totals[a.id]=(byProj[key].totals[a.id]||0)+(r[a.id]||0);});
+    });
+    const prh=["Project Code","Project Name","Team","People Working",...ACTIONS.map(a=>a.name)];
+    const prd=Object.values(byProj).map(p=>[p.project,p.display,p.team,[...p.people].join(", "),...ACTIONS.map(a=>p.totals[a.id]||0)]);
+    const ws3=XLSX.utils.aoa_to_sheet([prh,...prd]);
+    ws3["!cols"]=prh.map((_,i)=>({wch:i===0?30:i===1?24:i===3?20:8}));
+    XLSX.utils.book_append_sheet(wb,"By Project",ws3);
+  }
+
+  if(type==="today-team"||type==="week"||type==="month"){
+    // By team
+    const byTeam={luis:{team:"Luis",totals:{},people:new Set()},taiki:{team:"Taiki",totals:{},people:new Set()}};
+    rows.forEach(r=>{
+      const tid=r.team_id||(getMembers().luis?.includes(r.person)?"luis":"taiki");
+      if(!byTeam[tid])byTeam[tid]={team:tid,totals:{},people:new Set()};
+      byTeam[tid].people.add(r.person);
+      ACTIONS.forEach(a=>{byTeam[tid].totals[a.id]=(byTeam[tid].totals[a.id]||0)+(r[a.id]||0);});
+    });
+    const th=["Team","People","Active",...ACTIONS.map(a=>a.name)];
+    const td=Object.values(byTeam).map(t=>[t.team,getMembers()[t.team.toLowerCase()]?.length||0,t.people.size,...ACTIONS.map(a=>t.totals[a.id]||0)]);
+    const ws4=XLSX.utils.aoa_to_sheet([th,...td]);
+    XLSX.utils.book_append_sheet(wb,"By Team",ws4);
+  }
+
+  const fname=`arches-${type}-${dateLabel}.xlsx`;
+  XLSX.writeFile(wb,fname);
+  showToast(`⬇ ${sheetTitle} exported!`,"success");
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
