@@ -460,7 +460,7 @@ function showApp(){
   document.getElementById("hdate").textContent=new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"}).toUpperCase();
   const today=new Date().toISOString().split("T")[0];
   document.getElementById("hfrom").value=today;document.getElementById("hto").value=today;document.getElementById("cm-date").value=today;
-  populateSels();loadToday();loadAssigned();loadComments();renderPeopleSelector();setupRealtime();
+  syncMembersFromDB();populateSels();loadToday();loadAssigned();loadComments();renderPeopleSelector();setupRealtime();
   renderTgtForm();renderMemList();renderMgrList();
 }
 
@@ -818,19 +818,47 @@ function renderMemList(){
     </div>`).join("")}
     </div>`).join("");
 }
-function addMember(){const name=document.getElementById("new-mem").value.trim(),team=document.getElementById("new-mem-team").value;if(!name){showToast("⚠️ Enter name","error");return;}const m=getMembers();if(!m[team])m[team]=[];if(m[team].includes(name)){showToast("⚠️ Already exists","error");return;}m[team].push(name);localStorage.setItem("amem",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mem").value="";renderMemList();populateSels();renderPeopleSelector();}
+async function addMember(){
+  const name=document.getElementById("new-mem").value.trim(),team=document.getElementById("new-mem-team").value;
+  if(!name){showToast("⚠️ Enter name","error");return;}
+  const m=getMembers();
+  if(!m[team])m[team]=[];
+  if(m[team].includes(name)){showToast("⚠️ Already exists","error");return;}
+  // Add to Supabase first
+  const{error}=await db.from("members").upsert({name,team_id:team,active:true},{onConflict:"name"});
+  if(error){showToast(`⚠️ DB error: ${error.message}`,"error");return;}
+  // Then localStorage
+  m[team].push(name);
+  localStorage.setItem("amem",JSON.stringify(m));
+  showToast(`✅ ${name} added to Team ${team}!`,"success");
+  document.getElementById("new-mem").value="";
+  renderMemList();populateSels();renderPeopleSelector();
+}
 async function moveMem(n,from,to){
   if(from===to)return;
+  // Update localStorage
   const m=getMembers();
-  m[from]=m[from].filter(x=>x!==n);
-  if(!m[to])m[to]=[];m[to].push(n);
+  m[from]=(m[from]||[]).filter(x=>x!==n);
+  if(!m[to])m[to]=[];
+  if(!m[to].includes(n))m[to].push(n);
   localStorage.setItem("amem",JSON.stringify(m));
-  // Also update Supabase so tracker reflects the change
-  await db.from("members").update({team_id:to}).eq("name",n).catch(()=>{});
+  // Update Supabase so tracker reflects immediately
+  const{error}=await db.from("members").update({team_id:to}).eq("name",n);
+  if(error){showToast(`⚠️ DB error: ${error.message}`,"error");return;}
   showToast(`✅ ${n} moved to Team ${to}!`,"success");
   renderMemList();renderOverview();renderPeopleSelector();
 }
-function removeMem(n,team){if(!confirm(`Remove ${n}?`))return;const m=getMembers();m[team]=m[team].filter(x=>x!==n);localStorage.setItem("amem",JSON.stringify(m));showToast("Removed","info");renderMemList();renderOverview();}
+async function removeMem(n,team){
+  if(!confirm(`Remove ${n} from Team ${team}?`))return;
+  // Update Supabase
+  await db.from("members").update({active:false}).eq("name",n).catch(()=>{});
+  // Update localStorage
+  const m=getMembers();
+  m[team]=(m[team]||[]).filter(x=>x!==n);
+  localStorage.setItem("amem",JSON.stringify(m));
+  showToast(`${n} removed`,"info");
+  renderMemList();renderOverview();populateSels();renderPeopleSelector();
+}
 function renderMgrList(){document.getElementById("mgr-list").innerHTML=getMgrs().map((m,i)=>`<div style="display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)"><span style="font-size:11px;flex:1;color:var(--txt)">${m.name}</span><span style="font-size:9px;color:var(--txt3)">••••••</span>${i>0?`<button onclick="removeMgr(${i})" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.2);color:#F87171;border-radius:5px;padding:2px 7px;font-size:10px;cursor:pointer">🗑</button>`:`<span style="font-size:9px;color:var(--txt3)">owner</span>`}</div>`).join("");}
 function addManager(){const name=document.getElementById("new-mgr-n").value.trim(),pass=document.getElementById("new-mgr-p").value;if(!name||!pass){showToast("⚠️ Fill both","error");return;}const m=getMgrs();m.push({name,pass});localStorage.setItem("am",JSON.stringify(m));showToast(`✅ ${name} added!`,"success");document.getElementById("new-mgr-n").value="";document.getElementById("new-mgr-p").value="";renderMgrList();}
 function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",JSON.stringify(m));renderMgrList();}
@@ -1222,6 +1250,18 @@ function renderProjectBreakdown(){
       <div style="display:flex;flex-wrap:wrap;gap:3px">${pills||`<span style="font-size:10px;color:var(--txt3);font-style:italic">No actions yet</span>`}</div>
     </div>`;
   }).join("");
+}
+
+// Sync members from Supabase to localStorage on load
+async function syncMembersFromDB(){
+  try{
+    const{data}=await db.from("members").select("name,team_id").eq("active",true).order("name");
+    if(!data||data.length===0) return;
+    const m={luis:[],taiki:[]};
+    data.forEach(r=>{ if(m[r.team_id]) m[r.team_id].push(r.name); });
+    localStorage.setItem("amem",JSON.stringify(m));
+    renderMemList();populateSels();renderPeopleSelector();
+  }catch(e){}
 }
 
 checkSession();
