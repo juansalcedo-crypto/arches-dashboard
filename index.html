@@ -120,6 +120,7 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
     <button class="tab" onclick="showPage('performance',this)">📈 Performance</button>
     <button class="tab" onclick="showPage('history',this)">🗓 History</button>
     <button class="tab" onclick="showPage('assign',this)">📋 Assign</button>
+    <button class="tab" onclick="showPage('targets',this)">🎯 Monthly Targets</button>
     <button class="tab" onclick="showPage('settings',this)">⚙️ Settings</button>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -161,9 +162,93 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
       <div class="card"><div class="ch"><span class="ct">🟠 Team Luis</span><span id="luis-avg" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--org)">—</span></div><div id="luis-rows"></div></div>
       <div class="card"><div class="ch"><span class="ct">🔵 Team Taiki</span><span id="taiki-avg" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:var(--blu)">—</span></div><div id="taiki-rows"></div></div>
     </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px">
+      <div class="card">
+        <div class="ch"><span class="ct">⚡ Live Activity</span><span id="feed-ct" style="font-size:10px;color:var(--txt3)"></span></div>
+        <div id="feed" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+      <div class="card">
+        <div class="ch">
+          <span class="ct">📁 Actions by Project</span>
+          <span style="font-size:10px;color:var(--txt3)">Today</span>
+        </div>
+        <div id="proj-breakdown" style="max-height:400px;overflow-y:auto"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONTHLY TARGETS PAGE -->
+  <div id="page-targets" class="page">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:900;color:var(--txt)">Monthly Targets</div>
+        <div style="font-size:11px;color:var(--txt3);margin-top:2px" id="tgt-month-label"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <select class="fsel" id="tgt-month-sel" style="width:150px" onchange="loadMonthlyTargets()">
+        </select>
+        <button class="btn btn-org btn-sm" onclick="saveMonthlyTargets()">💾 Save Targets</button>
+        <button class="btn btn-ghost btn-sm" onclick="exportMonthlyExcel()">⬇ Export</button>
+      </div>
+    </div>
+
+    <!-- Team progress vs targets -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+      <div class="card">
+        <div class="ch"><span class="ct">🟠 Team Luis — Monthly Progress</span></div>
+        <div id="luis-monthly"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">🔵 Team Taiki — Monthly Progress</span></div>
+        <div id="taiki-monthly"></div>
+      </div>
+    </div>
+
+    <!-- Monthly targets editor -->
+    <div class="card">
+      <div class="ch">
+        <span class="ct">🎯 Set Monthly Targets per Action</span>
+        <span style="font-size:10px;color:var(--txt3)">These are separate from daily targets</span>
+      </div>
+      <div style="padding:14px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px" id="monthly-tgt-form"></div>
+      </div>
+    </div>
+
+    <!-- Per person monthly breakdown -->
     <div class="card" style="margin-top:14px">
-      <div class="ch"><span class="ct">⚡ Live Activity</span><span id="feed-ct" style="font-size:10px;color:var(--txt3)"></span></div>
-      <div id="feed" style="max-height:360px;overflow-y:auto"></div>
+      <div class="ch">
+        <span class="ct">📊 Monthly Breakdown by Person</span>
+        <select class="fsel" id="monthly-team-filter" onchange="renderMonthlyBreakdown()" style="width:130px">
+          <option value="all">All Teams</option>
+          <option value="luis">Team Luis</option>
+          <option value="taiki">Team Taiki</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="atbl">
+          <thead>
+            <tr>
+              <th>Person</th><th>Team</th><th>Days Active</th><th>Avg %</th>
+              <th class="tip" data-tip="DB Search">🗄️</th>
+              <th class="tip" data-tip="LI Search">🔍</th>
+              <th class="tip" data-tip="Expansion">📈</th>
+              <th class="tip" data-tip="Cold Call">📞</th>
+              <th class="tip" data-tip="Connections">🔗</th>
+              <th class="tip" data-tip="InMail">💼</th>
+              <th class="tip" data-tip="Emails">📧</th>
+              <th class="tip" data-tip="SMS">💬</th>
+              <th class="tip" data-tip="Company Call">🏢</th>
+              <th class="tip" data-tip="Proposals">🤝</th>
+              <th class="tip" data-tip="Int.Scheduled">🎙️</th>
+              <th class="tip" data-tip="Int.Done">📅</th>
+              <th class="tip" data-tip="Other">⚡</th>
+              <th>vs Target</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-tbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -394,7 +479,7 @@ async function loadToday(){
   const{data}=await db.from("daily_logs").select("*").eq("date",today).order("created_at",{ascending:false});
   todayLogs=data||[];
   document.getElementById("lupd").textContent=`Updated ${new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})}`;
-  renderOverview();renderPerf();
+  renderOverview();renderPerf();renderProjectBreakdown();
   const total=allMems().length;
   const active=[...new Set(todayLogs.map(r=>r.person))].length;
   document.getElementById("gbf").style.width=total>0?Math.round(active/total*100)+"%":"0%";
@@ -855,6 +940,7 @@ function showPage(page,btn){
   document.getElementById(`page-${page}`).classList.add("active");
   if(btn)btn.classList.add("active");
   if(page==="performance")renderPerf();
+  if(page==="targets"){buildMonthOptions();loadMonthlyTargets();}
   if(page==="history"){const today=new Date().toISOString().split("T")[0];document.getElementById("hfrom").value=today;document.getElementById("hto").value=today;loadHistory();}
   if(page==="settings"){renderTgtForm();renderMemList();renderMgrList();}
   if(page==="assign"){loadAssigned();loadComments();renderPeopleSelector();}
@@ -865,6 +951,277 @@ function showToast(msg,type="info"){
   t.style.background=type==="success"?"linear-gradient(135deg,#16A34A,#15803D)":type==="error"?"linear-gradient(135deg,#DC2626,#B91C1C)":"var(--sur2)";
   t.style.color="#fff";t.style.border="1px solid rgba(255,255,255,.1)";
   t.textContent=msg;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),4000);
+}
+
+// ── MONTHLY TARGETS ───────────────────────────────────────────────────────────
+const DEFAULT_MONTHLY_TARGETS = {
+  db_search:20, li_search:500, expansion:1200, cold_call:400,
+  connections:500, inmail:200, emails:800, sms:300,
+  company_call:20, proposals:60, int_sched:40, int_done:20, other:20
+};
+
+function getMonthlyTgts(monthKey){
+  const stored = JSON.parse(localStorage.getItem("amtgt")||"{}");
+  return stored[monthKey] || {...DEFAULT_MONTHLY_TARGETS};
+}
+
+function setMonthlyTgts(monthKey, tgts){
+  const stored = JSON.parse(localStorage.getItem("amtgt")||"{}");
+  stored[monthKey] = tgts;
+  localStorage.setItem("amtgt", JSON.stringify(stored));
+}
+
+function getMonthKey(date){ const d=date||new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`; }
+
+function buildMonthOptions(){
+  const sel = document.getElementById("tgt-month-sel"); if(!sel) return;
+  sel.innerHTML = "";
+  const now = new Date();
+  for(let i=0; i<6; i++){
+    const d = new Date(now.getFullYear(), now.getMonth()-i, 1);
+    const key = getMonthKey(d);
+    const label = d.toLocaleDateString("en-US",{month:"long",year:"numeric"});
+    const o = document.createElement("option");
+    o.value=key; o.textContent=label; if(i===0) o.selected=true;
+    sel.appendChild(o);
+  }
+}
+
+async function loadMonthlyTargets(){
+  const monthKey = document.getElementById("tgt-month-sel")?.value || getMonthKey();
+  const [year,month] = monthKey.split("-");
+  const from = `${year}-${month}-01`;
+  const lastDay = new Date(year, parseInt(month), 0).getDate();
+  const to = `${year}-${month}-${String(lastDay).padStart(2,"0")}`;
+
+  document.getElementById("tgt-month-label").textContent =
+    new Date(year, parseInt(month)-1, 1).toLocaleDateString("en-US",{month:"long",year:"numeric"});
+
+  // Fetch all logs for this month
+  const{data:logs} = await db.from("daily_logs").select("*").gte("date",from).lte("date",to);
+  const rows = logs||[];
+
+  const tgts = getMonthlyTgts(monthKey);
+
+  // Render targets form
+  renderMonthlyTgtForm(tgts);
+
+  // Render team progress
+  renderMonthlyTeam("luis", rows, tgts, "luis-monthly");
+  renderMonthlyTeam("taiki", rows, tgts, "taiki-monthly");
+
+  // Render breakdown
+  renderMonthlyBreakdown(rows, tgts);
+}
+
+function renderMonthlyTgtForm(tgts){
+  const el = document.getElementById("monthly-tgt-form"); if(!el) return;
+  el.innerHTML = ACTIONS.map(a=>`
+    <div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:10px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:14px">${a.emoji}</span>
+        <span style="font-size:11px;font-weight:600;color:var(--txt2)">${a.name}</span>
+      </div>
+      <input type="number" min="0" id="mtgt-${a.id}" value="${tgts[a.id]||DEFAULT_MONTHLY_TARGETS[a.id]||0}"
+        style="width:100%;background:var(--bg);border:1px solid var(--bdr);border-radius:6px;padding:6px 8px;font-size:14px;font-weight:700;color:var(--org);text-align:center;outline:none;font-family:'Syne',sans-serif"/>
+      <div style="font-size:9px;color:var(--txt3);text-align:center;margin-top:3px">monthly target</div>
+    </div>`).join("");
+}
+
+function saveMonthlyTargets(){
+  const monthKey = document.getElementById("tgt-month-sel")?.value || getMonthKey();
+  const tgts = {};
+  ACTIONS.forEach(a=>{ tgts[a.id]=parseInt(document.getElementById(`mtgt-${a.id}`)?.value)||0; });
+  setMonthlyTgts(monthKey, tgts);
+  showToast("✅ Monthly targets saved!","success");
+  loadMonthlyTargets();
+}
+
+function renderMonthlyTeam(teamId, rows, tgts, elId){
+  const el = document.getElementById(elId); if(!el) return;
+  const members = (getMembers()[teamId]||[]);
+  const teamRows = rows.filter(r=>members.includes(r.person)||(r.team_id===teamId));
+  const team = TEAMS[teamId];
+
+  el.innerHTML = ACTIONS.map(a=>{
+    const total = teamRows.reduce((s,r)=>s+(r[a.id]||0),0);
+    const tgt = tgts[a.id]||DEFAULT_MONTHLY_TARGETS[a.id]||1;
+    const pct = Math.min(100, Math.round(total/tgt*100));
+    const color = pct>=100?"var(--grn)":pct>=60?"var(--ylw)":"var(--org)";
+    return`<div style="padding:7px 12px;border-bottom:1px solid rgba(255,255,255,.04)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span style="font-size:12px">${a.emoji}</span>
+          <span style="font-size:11px;color:var(--txt2)">${a.name}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:11px;color:var(--txt3)">${total} / ${tgt}</span>
+          <span style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;color:${color};min-width:36px;text-align:right">${pct}%</span>
+        </div>
+      </div>
+      <div style="height:4px;background:var(--bdr);border-radius:2px;overflow:hidden">
+        <div style="height:100%;width:${pct}%;background:${color};border-radius:2px;transition:width .5s"></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderMonthlyBreakdown(rows, tgts){
+  if(!rows){
+    // Called from filter change — need to re-fetch
+    loadMonthlyTargets();
+    return;
+  }
+  const teamFilter = document.getElementById("monthly-team-filter")?.value||"all";
+  let filteredRows = rows||[];
+  if(teamFilter!=="all") filteredRows=filteredRows.filter(r=>r.team_id===teamFilter||getMembers()[teamFilter]?.includes(r.person));
+
+  const byP={};
+  filteredRows.forEach(r=>{
+    if(!byP[r.person])byP[r.person]={name:r.person,team:r.team_id||memTeam(r.person),days:new Set(),pcts:[],totals:{}};
+    byP[r.person].days.add(r.date);byP[r.person].pcts.push(r.pct);
+    ACTIONS.forEach(a=>{byP[r.person].totals[a.id]=(byP[r.person].totals[a.id]||0)+(r[a.id]||0);});
+  });
+
+  const people = Object.values(byP).sort((a,b)=>{
+    const aa=a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length;
+    const bb=b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length;
+    return bb-aa;
+  });
+
+  const tbody = document.getElementById("monthly-tbody"); if(!tbody) return;
+  const mt = tgts||getMonthlyTgts(document.getElementById("tgt-month-sel")?.value||getMonthKey());
+
+  tbody.innerHTML = people.map((p,i)=>{
+    const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
+    const team=TEAMS[p.team];
+    const medal=["🥇","🥈","🥉"][i]||"";
+    // Overall vs monthly target
+    const totalActions=ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0);
+    const totalTarget=ACTIONS.reduce((s,a)=>s+(mt[a.id]||0),0);
+    const overallPct=totalTarget>0?Math.round(totalActions/totalTarget*100):0;
+    const color=avg>=80?"var(--grn)":avg>=50?"var(--ylw)":"var(--red)";
+    return`<tr>
+      <td style="font-weight:600;color:var(--org);cursor:pointer" onclick="showDetail('${p.name}')">${medal} ${p.name}</td>
+      <td>${team?`<span style="font-size:9px;padding:2px 5px;border-radius:5px;background:${team.color}18;color:${team.color}">${team.emoji}</span>`:"—"}</td>
+      <td style="color:var(--txt3)">${p.days.size}</td>
+      <td style="font-family:'Syne',sans-serif;font-weight:800;color:${color}">${avg}%</td>
+      ${ACTIONS.map(a=>{
+        const v=p.totals[a.id]||0,t=mt[a.id]||1;
+        const pct=Math.min(100,Math.round(v/t*100));
+        return`<td class="tip" data-tip="${a.name}: ${v}/${t} (${pct}%)" style="color:${pct>=100?"var(--grn)":v>0?"var(--org)":"var(--txt3)"};font-weight:${v>0?600:400}">${v}</td>`;
+      }).join("")}
+      <td>
+        <div style="display:flex;align-items:center;gap:6px">
+          <div style="width:50px;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden">
+            <div style="height:100%;width:${Math.min(100,overallPct)}%;background:${overallPct>=100?"var(--grn)":overallPct>=60?"var(--ylw)":"var(--org)"};border-radius:2px"></div>
+          </div>
+          <span style="font-size:10px;font-weight:600;color:${overallPct>=100?"var(--grn)":"var(--txt2)"}">${overallPct}%</span>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function exportMonthlyExcel(){
+  const monthKey = document.getElementById("tgt-month-sel")?.value || getMonthKey();
+  const [year,month] = monthKey.split("-");
+  const from = `${year}-${month}-01`;
+  const lastDay = new Date(year, parseInt(month), 0).getDate();
+  const to = `${year}-${month}-${String(lastDay).padStart(2,"0")}`;
+  const{data:logs}=await db.from("daily_logs").select("*").gte("date",from).lte("date",to);
+  const rows=logs||[];
+  if(rows.length===0){showToast("⚠️ No data for this month","error");return;}
+  const tgts=getMonthlyTgts(monthKey);
+  const wb=XLSX.utils.book_new();
+
+  // Sheet 1: Raw data
+  const h=["Date","Person","Team","Project","Priority",...ACTIONS.map(a=>a.name),"Done","%"];
+  const rawRows=rows.map(r=>[r.date,r.person,r.team_id||"",dispName(r.project),r.priority,...ACTIONS.map(a=>r[a.id]||0),r.actions_done,r.pct+"%"]);
+  const ws1=XLSX.utils.aoa_to_sheet([h,...rawRows]);
+  XLSX.utils.book_append_sheet(wb,"Raw Data",ws1);
+
+  // Sheet 2: By person with vs target
+  const byP={};
+  rows.forEach(r=>{
+    if(!byP[r.person])byP[r.person]={name:r.person,team:r.team_id||"",days:new Set(),pcts:[],totals:{}};
+    byP[r.person].days.add(r.date);byP[r.person].pcts.push(r.pct);
+    ACTIONS.forEach(a=>{byP[r.person].totals[a.id]=(byP[r.person].totals[a.id]||0)+(r[a.id]||0);});
+  });
+  const ph=["Person","Team","Days Active","Avg %",...ACTIONS.map(a=>a.name),"Total vs Target"];
+  const pd=Object.values(byP).map(p=>{
+    const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
+    const total=ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0);
+    const tgt=ACTIONS.reduce((s,a)=>s+(tgts[a.id]||0),0);
+    return[p.name,p.team,p.days.size,avg+"%",...ACTIONS.map(a=>p.totals[a.id]||0),`${total}/${tgt} (${tgt>0?Math.round(total/tgt*100):0}%)`];
+  });
+  const ws2=XLSX.utils.aoa_to_sheet([ph,...pd]);
+  XLSX.utils.book_append_sheet(wb,"By Person",ws2);
+
+  // Sheet 3: Monthly targets vs actuals
+  const th=["Action","Monthly Target","Team Luis","Team Taiki","Total","% of Target"];
+  const luisRows=rows.filter(r=>getMembers().luis?.includes(r.person)||r.team_id==="luis");
+  const taikiRows=rows.filter(r=>getMembers().taiki?.includes(r.person)||r.team_id==="taiki");
+  const td=ACTIONS.map(a=>{
+    const tgt=tgts[a.id]||0;
+    const luis=luisRows.reduce((s,r)=>s+(r[a.id]||0),0);
+    const taiki=taikiRows.reduce((s,r)=>s+(r[a.id]||0),0);
+    const total=luis+taiki;
+    return[a.name,tgt,luis,taiki,total,tgt>0?Math.round(total/tgt*100)+"%":"—"];
+  });
+  const ws3=XLSX.utils.aoa_to_sheet([th,...td]);
+  XLSX.utils.book_append_sheet(wb,"Monthly Targets",ws3);
+
+  XLSX.writeFile(wb,`arches-monthly-${monthKey}.xlsx`);
+  showToast("⬇ Monthly report exported!","success");
+}
+
+// ── ENHANCED OVERVIEW: Actions by Project ─────────────────────────────────────
+function renderProjectBreakdown(){
+  const el = document.getElementById("proj-breakdown"); if(!el) return;
+  if(todayLogs.length===0){el.innerHTML=`<div style="padding:16px;text-align:center;font-size:11px;color:var(--txt3);font-style:italic">No data yet today</div>`;return;}
+
+  // Group by project
+  const byProj={};
+  todayLogs.forEach(r=>{
+    const key=r.project;
+    if(!byProj[key])byProj[key]={project:r.project,team:r.team_id,people:new Set(),totals:{},pcts:[]};
+    byProj[key].people.add(r.person);byProj[key].pcts.push(r.pct);
+    ACTIONS.forEach(a=>{byProj[key].totals[a.id]=(byProj[key].totals[a.id]||0)+(r[a.id]||0);});
+  });
+
+  const projects=Object.values(byProj).sort((a,b)=>{
+    const aa=a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length;
+    const bb=b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length;
+    return bb-aa;
+  });
+  const targets=getTgts();
+
+  el.innerHTML=projects.map(proj=>{
+    const avg=Math.round(proj.pcts.reduce((s,x)=>s+x,0)/proj.pcts.length);
+    const team=TEAMS[proj.team];
+    const color=avg>=80?"var(--grn)":avg>=50?"var(--ylw)":"var(--red)";
+    const pills=ACTIONS.map(a=>{
+      const v=proj.totals[a.id]||0,t=targets[a.id]||a.target;
+      if(v===0)return"";
+      return`<span class="tip" data-tip="${a.name}: ${v}/${t}" style="font-size:9px;padding:2px 6px;border-radius:5px;background:${v>=t?"rgba(34,197,94,.12)":"rgba(247,162,0,.1)"};color:${v>=t?"#4ADE80":"var(--org)"};border:1px solid ${v>=t?"rgba(34,197,94,.2)":"rgba(247,162,0,.2)"}">${a.emoji} ${v}</span>`;
+    }).filter(Boolean).join(" ");
+
+    return`<div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.04)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px">
+        <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
+          ${team?`<span style="font-size:9px;padding:2px 5px;border-radius:5px;background:${team.color}18;color:${team.color};font-weight:600;flex-shrink:0">${team.emoji}</span>`:""}
+          <span style="font-size:11px;font-weight:600;color:var(--txt);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${dispName(proj.project)}</span>
+          <span style="font-size:9px;color:var(--txt3);flex-shrink:0">${proj.people.size} person(s)</span>
+        </div>
+        <span style="font-family:'Syne',sans-serif;font-size:13px;font-weight:800;color:${color};flex-shrink:0;margin-left:8px">${avg}%</span>
+      </div>
+      <div style="height:3px;background:var(--bdr);border-radius:2px;overflow:hidden;margin-bottom:6px">
+        <div style="height:100%;width:${avg}%;background:${color};border-radius:2px;transition:width .5s"></div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:3px">${pills||`<span style="font-size:10px;color:var(--txt3);font-style:italic">No actions yet</span>`}</div>
+    </div>`;
+  }).join("");
 }
 
 checkSession();
