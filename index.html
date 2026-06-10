@@ -931,8 +931,17 @@ async function exportExcelOpt(period){
   ws3["!cols"]=h3.map((_,i)=>({wch:i===0?32:i===1?26:i===3?22:9}));
   XLSX.utils.book_append_sheet(wb,"By Project",ws3);
 
-  XLSX.writeFile(wb,`arches-${sheetTitle.replace(" ","-").toLowerCase()}-${today}.xlsx`);
-  showToast(`✅ Excel downloaded!`,"success");
+  // Force download via blob link
+  const fname=`arches-${sheetTitle.replace(" ","-").toLowerCase()}-${today}.xlsx`;
+  const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+  const blob=new Blob([wbout],{type:"application/octet-stream"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url; a.download=fname;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  showToast(`✅ ${fname} downloaded!`,"success");
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
