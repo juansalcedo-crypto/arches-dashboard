@@ -130,16 +130,16 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
     <span id="lupd" style="font-size:9px;color:var(--txt3)"></span>
     <span id="hmgr" style="font-size:11px;color:var(--txt2)"></span>
     <div style="position:relative;display:inline-block" id="excel-wrap">
-      <button class="btn btn-org btn-sm" onclick="toggleExcelMenu()">⬇ Excel ▾</button>
-      <div id="excel-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:6px;min-width:200px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:100;animation:fadeIn .2s ease">
+      <button class="btn btn-org btn-sm" id="excel-btn">⬇ Excel ▾</button>
+      <div id="excel-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:6px;min-width:210px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:100">
         <div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;padding:4px 8px 6px">Export Options</div>
-        <button onclick="exportExcelOpt('today-general')" class="excel-opt">📊 Today — General</button>
-        <button onclick="exportExcelOpt('today-person')" class="excel-opt">👤 Today — By Person</button>
-        <button onclick="exportExcelOpt('today-project')" class="excel-opt">📁 Today — By Project</button>
-        <button onclick="exportExcelOpt('today-team')" class="excel-opt">👥 Today — By Team</button>
+        <button data-export="today-general" class="excel-opt">📊 Today — General</button>
+        <button data-export="today-person" class="excel-opt">👤 Today — By Person</button>
+        <button data-export="today-project" class="excel-opt">📁 Today — By Project</button>
+        <button data-export="today-team" class="excel-opt">👥 Today — By Team</button>
         <div style="height:1px;background:var(--bdr);margin:4px 0"></div>
-        <button onclick="exportExcelOpt('week')" class="excel-opt">📅 This Week</button>
-        <button onclick="exportExcelOpt('month')" class="excel-opt">🗓 This Month</button>
+        <button data-export="week" class="excel-opt">📅 This Week</button>
+        <button data-export="month" class="excel-opt">🗓 This Month</button>
       </div>
     </div>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">↩ Logout</button>
@@ -215,41 +215,6 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
       </div>
     </div>
 
-    <!-- Per person monthly breakdown -->
-    <div class="card" style="margin-top:14px">
-      <div class="ch">
-        <span class="ct">📊 Monthly Breakdown by Person</span>
-        <select class="fsel" id="monthly-team-filter" onchange="renderMonthlyBreakdown()" style="width:130px">
-          <option value="all">All Teams</option>
-          <option value="luis">Team Luis</option>
-          <option value="taiki">Team Taiki</option>
-        </select>
-      </div>
-      <div style="overflow-x:auto">
-        <table class="atbl">
-          <thead>
-            <tr>
-              <th>Person</th><th>Team</th><th>Days Active</th><th>Avg %</th>
-              <th class="tip" data-tip="DB Search">🗄️</th>
-              <th class="tip" data-tip="LI Search">🔍</th>
-              <th class="tip" data-tip="Expansion">📈</th>
-              <th class="tip" data-tip="Cold Call">📞</th>
-              <th class="tip" data-tip="Connections">🔗</th>
-              <th class="tip" data-tip="InMail">💼</th>
-              <th class="tip" data-tip="Emails">📧</th>
-              <th class="tip" data-tip="SMS">💬</th>
-              <th class="tip" data-tip="Company Call">🏢</th>
-              <th class="tip" data-tip="Proposals">🤝</th>
-              <th class="tip" data-tip="Int.Scheduled">🎙️</th>
-              <th class="tip" data-tip="Int.Done">📅</th>
-              <th class="tip" data-tip="Other">⚡</th>
-              <th>vs Target</th>
-            </tr>
-          </thead>
-          <tbody id="monthly-tbody"></tbody>
-        </table>
-      </div>
-    </div>
   </div>
 
   <!-- PERFORMANCE -->
@@ -627,12 +592,17 @@ async function renderPerf(){
   const el=document.getElementById("perf-content");
   if(people.length===0){el.innerHTML=`<div style="padding:30px;text-align:center;color:var(--txt3);font-size:12px">No data for selected period</div>`;return;}
   const targets=getTgts();
-  el.innerHTML=`<div class="card"><div class="ch"><span class="ct">📈 Performance Ranking</span></div><div style="overflow-x:auto"><table class="atbl">
-    <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Days</th><th>Avg %</th><th>Bar</th>${ACTIONS.map(a=>`<th class="tip" data-tip="${a.name}">${a.emoji}</th>`).join("")}</tr></thead>
+  const isMonth = period==="month";
+  const monthKey = getMonthKey();
+  const monthTgts = isMonth ? getMonthlyTgts(monthKey) : null;
+
+  el.innerHTML=`<div class="card"><div class="ch"><span class="ct">📈 Performance Ranking${isMonth?" — vs Monthly Targets":""}</span></div><div style="overflow-x:auto"><table class="atbl">
+    <thead><tr><th>#</th><th>Person</th><th>Team</th><th>Days</th><th>Avg %</th><th>Bar</th>${ACTIONS.map(a=>`<th class="tip" data-tip="${a.name}">${a.emoji}</th>`).join("")}${isMonth?`<th style="color:var(--pur)">vs Target</th>`:""}</tr></thead>
     <tbody>${people.map((p,i)=>{
       const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
       const color=avg>=80?"var(--grn)":avg>=50?"var(--ylw)":"var(--red)";
       const team=TEAMS[p.team];
+      const monthlyPct=isMonth?Math.round(ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0)/Math.max(1,ACTIONS.reduce((s,a)=>s+(monthTgts[a.id]||1),0))*100):0;
       return`<tr>
         <td style="color:var(--txt3)">${["🥇","🥈","🥉"][i]||i+1}</td>
         <td style="font-weight:600;color:var(--org);cursor:pointer" onclick="showDetail('${p.name}')">${p.name}</td>
@@ -641,6 +611,7 @@ async function renderPerf(){
         <td style="font-family:'Syne',sans-serif;font-weight:800;color:${color}">${avg}%</td>
         <td><div style="width:70px;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden"><div style="height:100%;width:${avg}%;background:${color};border-radius:2px"></div></div></td>
         ${ACTIONS.map(a=>{const v=p.totals[a.id]||0,t=targets[a.id]||a.target;return`<td class="tip" data-tip="${a.name}: ${v}/${t}" style="color:${v>=t?"var(--grn)":v>0?"var(--org)":"var(--txt3)"};font-weight:${v>0?600:400}">${v}</td>`;}).join("")}
+        ${isMonth?`<td><div style="display:flex;align-items:center;gap:5px"><div style="width:44px;height:3px;background:var(--bdr);border-radius:2px;overflow:hidden"><div style="height:100%;width:${Math.min(100,monthlyPct)}%;background:${monthlyPct>=100?"var(--grn)":monthlyPct>=60?"var(--ylw)":"var(--pur)"};border-radius:2px"></div></div><span style="font-size:10px;font-weight:700;color:${monthlyPct>=100?"var(--grn)":monthlyPct>=60?"var(--ylw)":"var(--pur)"}">${monthlyPct}%</span></div></td>`:""}
       </tr>`;
     }).join("")}</tbody>
   </table></div></div>`;
@@ -867,10 +838,29 @@ function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",
 function toggleExcelMenu(){
   const m=document.getElementById("excel-menu");
   m.style.display=m.style.display==="none"?"block":"none";
-  if(m.style.display==="block"){
-    const close=(e)=>{ if(!document.getElementById("excel-wrap").contains(e.target)){m.style.display="none";document.removeEventListener("click",close);} };
-    setTimeout(()=>document.addEventListener("click",close),100);
-  }
+}
+
+// Set up excel button and menu item listeners after DOM loads
+function initExcelBtn(){
+  const btn=document.getElementById("excel-btn");
+  const menu=document.getElementById("excel-menu");
+  if(!btn||!menu) return;
+  btn.addEventListener("click",function(e){
+    e.stopPropagation();
+    menu.style.display=menu.style.display==="none"?"block":"none";
+  });
+  menu.querySelectorAll(".excel-opt").forEach(function(opt){
+    opt.addEventListener("click",function(){
+      const type=this.getAttribute("data-export");
+      menu.style.display="none";
+      exportExcelOpt(type);
+    });
+  });
+  document.addEventListener("click",function(e){
+    if(!document.getElementById("excel-wrap").contains(e.target)){
+      menu.style.display="none";
+    }
+  });
 }
 
 async function exportExcelOpt(type){
@@ -1117,7 +1107,7 @@ function renderMonthlyBreakdown(rows, tgts){
     return bb-aa;
   });
 
-  const tbody = document.getElementById("monthly-tbody"); if(!tbody) return;
+  const tbody = document.getElementById("monthly-tbody"); if(!tbody) return; // table removed - breakdown now in Performance
   const mt = tgts||getMonthlyTgts(document.getElementById("tgt-month-sel")?.value||getMonthKey());
 
   tbody.innerHTML = people.map((p,i)=>{
