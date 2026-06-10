@@ -53,6 +53,9 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
 .fsel option{background:var(--sur)}
 .flbl{font-size:10px;font-weight:600;color:var(--txt2);letter-spacing:.5px;text-transform:uppercase;margin-bottom:5px;display:block}
 .atbl{width:100%;border-collapse:collapse}
+.period-btn{background:var(--sur2);border:1px solid var(--bdr);border-radius:8px;padding:8px;font-size:12px;font-weight:600;color:var(--txt2);cursor:pointer;transition:all .15s;font-family:'Inter',sans-serif}
+.period-btn.active{background:var(--org);border-color:var(--org);color:#fff}
+.period-btn:hover:not(.active){border-color:var(--org);color:var(--org)}
 .atbl th{font-size:9px;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;padding:7px 9px;text-align:left;background:var(--sur2);border-bottom:1px solid var(--bdr)}
 .atbl td{padding:6px 9px;border-bottom:1px solid rgba(255,255,255,.04);font-size:11px}
 .atbl tr:hover td{background:rgba(247,162,0,.03)}
@@ -129,19 +132,7 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
     </div>
     <span id="lupd" style="font-size:9px;color:var(--txt3)"></span>
     <span id="hmgr" style="font-size:11px;color:var(--txt2)"></span>
-    <div style="position:relative;display:inline-block" id="excel-wrap">
-      <button class="btn btn-org btn-sm" id="excel-btn">⬇ Excel ▾</button>
-      <div id="excel-menu" style="display:none;position:absolute;right:0;top:calc(100% + 6px);background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:6px;min-width:210px;box-shadow:0 8px 24px rgba(0,0,0,.5);z-index:100">
-        <div style="font-size:9px;font-weight:700;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;padding:4px 8px 6px">Export Options</div>
-        <button data-export="today-general" class="excel-opt">📊 Today — General</button>
-        <button data-export="today-person" class="excel-opt">👤 Today — By Person</button>
-        <button data-export="today-project" class="excel-opt">📁 Today — By Project</button>
-        <button data-export="today-team" class="excel-opt">👥 Today — By Team</button>
-        <div style="height:1px;background:var(--bdr);margin:4px 0"></div>
-        <button data-export="week" class="excel-opt">📅 This Week</button>
-        <button data-export="month" class="excel-opt">🗓 This Month</button>
-      </div>
-    </div>
+    <button class="btn btn-org btn-sm" onclick="openExcelModal()">⬇ Excel</button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">↩ Logout</button>
   </div>
 </div>
@@ -355,6 +346,24 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
   </div>
 </div>
 <div id="toast"></div>
+
+<!-- EXCEL MODAL -->
+<div class="modal-ov" id="excel-modal" style="display:none">
+  <div class="mbox" style="max-width:380px">
+    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:900;color:var(--org);margin-bottom:6px">⬇ Export Excel</div>
+    <div style="font-size:11px;color:var(--txt3);margin-bottom:16px">3 sheets: Raw data · By Person · By Project</div>
+    <label class="flbl">Period</label>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">
+      <button class="period-btn active" data-period="today" onclick="selectPeriod(this)">Today</button>
+      <button class="period-btn" data-period="week" onclick="selectPeriod(this)">This Week</button>
+      <button class="period-btn" data-period="month" onclick="selectPeriod(this)">This Month</button>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="document.getElementById('excel-modal').style.display='none'">Cancel</button>
+      <button class="btn btn-org" style="flex:2;justify-content:center" onclick="runExport()">⬇ Download</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SUPA_URL="https://watgvezsgppjvusotuge.supabase.co";
@@ -835,114 +844,95 @@ function addManager(){const name=document.getElementById("new-mgr-n").value.trim
 function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",JSON.stringify(m));renderMgrList();}
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-function toggleExcelMenu(){
-  const m=document.getElementById("excel-menu");
-  m.style.display=m.style.display==="none"?"block":"none";
+function openExcelModal(){
+  document.getElementById("excel-modal").style.display="flex";
 }
 
-// Set up excel button and menu item listeners after DOM loads
-function initExcelBtn(){
-  const btn=document.getElementById("excel-btn");
-  const menu=document.getElementById("excel-menu");
-  if(!btn||!menu) return;
-  btn.addEventListener("click",function(e){
-    e.stopPropagation();
-    menu.style.display=menu.style.display==="none"?"block":"none";
-  });
-  menu.querySelectorAll(".excel-opt").forEach(function(opt){
-    opt.addEventListener("click",function(){
-      const type=this.getAttribute("data-export");
-      menu.style.display="none";
-      exportExcelOpt(type);
-    });
-  });
-  document.addEventListener("click",function(e){
-    if(!document.getElementById("excel-wrap").contains(e.target)){
-      menu.style.display="none";
-    }
-  });
+function selectPeriod(btn){
+  document.querySelectorAll(".period-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
 }
 
-async function exportExcelOpt(type){
-  document.getElementById("excel-menu").style.display="none";
+function runExport(){
+  const active=document.querySelector(".period-btn.active");
+  const period=active?active.getAttribute("data-period"):"today";
+  document.getElementById("excel-modal").style.display="none";
+  exportExcelOpt(period);
+}
+
+async function exportExcelOpt(period){
   const today=new Date().toISOString().split("T")[0];
-  let rows=todayLogs, dateLabel=today, sheetTitle="Today";
+  let rows=[], dateLabel=today, sheetTitle="Today";
 
-  if(type==="week"||type==="month"){
+  if(period==="today"){
+    rows=todayLogs;
+  } else {
     const from=new Date();
-    if(type==="week")from.setDate(from.getDate()-7);
-    else from.setDate(1); // first of month
-    const{data}=await db.from("daily_logs").select("*").gte("date",from.toISOString().split("T")[0]).lte("date",today).order("date",{ascending:false});
-    rows=data||[]; sheetTitle=type==="week"?"This Week":"This Month"; dateLabel=type;
+    if(period==="week") from.setDate(from.getDate()-7);
+    else { from.setDate(1); } // first of month
+    const fromStr=from.toISOString().split("T")[0];
+    const{data}=await db.from("daily_logs").select("*").gte("date",fromStr).lte("date",today).order("date",{ascending:false});
+    rows=data||[];
+    sheetTitle=period==="week"?"This Week":"This Month";
+    dateLabel=period;
   }
 
   if(rows.length===0){showToast("⚠️ No data for this period","error");return;}
+  showToast("⏳ Building Excel…","info");
+
   const wb=XLSX.utils.book_new();
-  const targets=getTgts();
 
-  const baseHeaders=["Date","Person","Team","Project (Full Code)","Project (Display)","Priority",...ACTIONS.map(a=>a.name),"Actions Done","% Complete"];
-  const baseRows=rows.map(r=>[r.date,r.person,r.team_id||"",r.project,dispName(r.project),r.priority,...ACTIONS.map(a=>r[a.id]||0),r.actions_done,r.pct+"%"]);
+  // ── Sheet 1: Raw Data ──────────────────────────────────────────────────────
+  const h1=["Date","Person","Team","Project Code","Project Name","Priority",
+    ...ACTIONS.map(a=>a.name),"Actions Done","% Complete"];
+  const d1=rows.map(r=>[
+    r.date, r.person, r.team_id||"",
+    r.project, dispName(r.project), r.priority,
+    ...ACTIONS.map(a=>r[a.id]||0),
+    r.actions_done, r.pct+"%"
+  ]);
+  const ws1=XLSX.utils.aoa_to_sheet([h1,...d1]);
+  ws1["!cols"]=h1.map((_,i)=>({wch:i===3?32:i===4?26:i<6?14:9}));
+  XLSX.utils.book_append_sheet(wb,"Raw Data",ws1);
 
-  function styleSheet(ws){
-    ws["!cols"]=baseHeaders.map((_,i)=>({wch:i===3?30:i===4?24:i<6?14:8}));
-    return ws;
-  }
+  // ── Sheet 2: By Person ─────────────────────────────────────────────────────
+  const byP={};
+  rows.forEach(r=>{
+    if(!byP[r.person])byP[r.person]={name:r.person,team:r.team_id||memTeam(r.person)||"",days:new Set(),pcts:[],totals:{}};
+    byP[r.person].days.add(r.date);
+    byP[r.person].pcts.push(r.pct);
+    ACTIONS.forEach(a=>{byP[r.person].totals[a.id]=(byP[r.person].totals[a.id]||0)+(r[a.id]||0);});
+  });
+  const h2=["Person","Team","Days Active","Avg %",...ACTIONS.map(a=>a.name)];
+  const d2=Object.values(byP)
+    .sort((a,b)=>(b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length)-(a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length))
+    .map(p=>[
+      p.name, p.team, p.days.size,
+      Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length)+"%",
+      ...ACTIONS.map(a=>p.totals[a.id]||0)
+    ]);
+  const ws2=XLSX.utils.aoa_to_sheet([h2,...d2]);
+  ws2["!cols"]=h2.map((_,i)=>({wch:i<2?18:i<4?12:9}));
+  XLSX.utils.book_append_sheet(wb,"By Person",ws2);
 
-  if(type==="today-general"||type==="week"||type==="month"){
-    const ws=XLSX.utils.aoa_to_sheet([baseHeaders,...baseRows]);
-    styleSheet(ws);
-    XLSX.utils.book_append_sheet(wb,sheetTitle,ws);
-  }
+  // ── Sheet 3: By Project ────────────────────────────────────────────────────
+  const byProj={};
+  rows.forEach(r=>{
+    if(!byProj[r.project])byProj[r.project]={code:r.project,name:dispName(r.project),team:r.team_id||"",people:new Set(),totals:{}};
+    byProj[r.project].people.add(r.person);
+    ACTIONS.forEach(a=>{byProj[r.project].totals[a.id]=(byProj[r.project].totals[a.id]||0)+(r[a.id]||0);});
+  });
+  const h3=["Project Code","Project Name","Team","People Working",...ACTIONS.map(a=>a.name)];
+  const d3=Object.values(byProj).map(p=>[
+    p.code, p.name, p.team, [...p.people].join(", "),
+    ...ACTIONS.map(a=>p.totals[a.id]||0)
+  ]);
+  const ws3=XLSX.utils.aoa_to_sheet([h3,...d3]);
+  ws3["!cols"]=h3.map((_,i)=>({wch:i===0?32:i===1?26:i===3?22:9}));
+  XLSX.utils.book_append_sheet(wb,"By Project",ws3);
 
-  if(type==="today-person"||type==="week"||type==="month"){
-    // By person — one row per person with totals
-    const byP={};
-    rows.forEach(r=>{
-      if(!byP[r.person])byP[r.person]={person:r.person,team:r.team_id||"",reports:0,pcts:[],totals:{}};
-      byP[r.person].reports++;byP[r.person].pcts.push(r.pct);
-      ACTIONS.forEach(a=>{byP[r.person].totals[a.id]=(byP[r.person].totals[a.id]||0)+(r[a.id]||0);});
-    });
-    const ph=["Person","Team","Reports","Avg %",...ACTIONS.map(a=>a.name)];
-    const pd=Object.values(byP).sort((a,b)=>{const aa=a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length,bb=b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length;return bb-aa;}).map(p=>[p.person,p.team,p.reports,Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length)+"%",...ACTIONS.map(a=>p.totals[a.id]||0)]);
-    const ws2=XLSX.utils.aoa_to_sheet([ph,...pd]);
-    ws2["!cols"]=ph.map((_,i)=>({wch:i<3?16:8}));
-    XLSX.utils.book_append_sheet(wb,"By Person",ws2);
-  }
-
-  if(type==="today-project"||type==="week"||type==="month"){
-    // By project
-    const byProj={};
-    rows.forEach(r=>{
-      const key=r.project;
-      if(!byProj[key])byProj[key]={project:r.project,display:dispName(r.project),team:r.team_id||"",people:new Set(),totals:{}};
-      byProj[key].people.add(r.person);
-      ACTIONS.forEach(a=>{byProj[key].totals[a.id]=(byProj[key].totals[a.id]||0)+(r[a.id]||0);});
-    });
-    const prh=["Project Code","Project Name","Team","People Working",...ACTIONS.map(a=>a.name)];
-    const prd=Object.values(byProj).map(p=>[p.project,p.display,p.team,[...p.people].join(", "),...ACTIONS.map(a=>p.totals[a.id]||0)]);
-    const ws3=XLSX.utils.aoa_to_sheet([prh,...prd]);
-    ws3["!cols"]=prh.map((_,i)=>({wch:i===0?30:i===1?24:i===3?20:8}));
-    XLSX.utils.book_append_sheet(wb,"By Project",ws3);
-  }
-
-  if(type==="today-team"||type==="week"||type==="month"){
-    // By team
-    const byTeam={luis:{team:"Luis",totals:{},people:new Set()},taiki:{team:"Taiki",totals:{},people:new Set()}};
-    rows.forEach(r=>{
-      const tid=r.team_id||(getMembers().luis?.includes(r.person)?"luis":"taiki");
-      if(!byTeam[tid])byTeam[tid]={team:tid,totals:{},people:new Set()};
-      byTeam[tid].people.add(r.person);
-      ACTIONS.forEach(a=>{byTeam[tid].totals[a.id]=(byTeam[tid].totals[a.id]||0)+(r[a.id]||0);});
-    });
-    const th=["Team","People","Active",...ACTIONS.map(a=>a.name)];
-    const td=Object.values(byTeam).map(t=>[t.team,getMembers()[t.team.toLowerCase()]?.length||0,t.people.size,...ACTIONS.map(a=>t.totals[a.id]||0)]);
-    const ws4=XLSX.utils.aoa_to_sheet([th,...td]);
-    XLSX.utils.book_append_sheet(wb,"By Team",ws4);
-  }
-
-  const fname=`arches-${type}-${dateLabel}.xlsx`;
-  XLSX.writeFile(wb,fname);
-  showToast(`⬇ ${sheetTitle} exported!`,"success");
+  XLSX.writeFile(wb,`arches-${sheetTitle.replace(" ","-").toLowerCase()}-${today}.xlsx`);
+  showToast(`✅ Excel downloaded!`,"success");
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
