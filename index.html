@@ -132,7 +132,11 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
     </div>
     <span id="lupd" style="font-size:9px;color:var(--txt3)"></span>
     <span id="hmgr" style="font-size:11px;color:var(--txt2)"></span>
-    <button class="btn btn-org btn-sm" onclick="openExcelModal()">⬇ Excel</button>
+    <div style="display:flex;gap:4px">
+      <button class="btn btn-org btn-sm" style="font-size:10px" onclick="exportExcelOpt('today')">📊 Today</button>
+      <button class="btn btn-org btn-sm" style="font-size:10px;background:rgba(247,162,0,.15);color:#F7A200;box-shadow:none;border:1px solid rgba(247,162,0,.3)" onclick="exportExcelOpt('week')">Week</button>
+      <button class="btn btn-org btn-sm" style="font-size:10px;background:rgba(247,162,0,.15);color:#F7A200;box-shadow:none;border:1px solid rgba(247,162,0,.3)" onclick="exportExcelOpt('month')">Month</button>
+    </div>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">↩ Logout</button>
   </div>
 </div>
@@ -347,21 +351,7 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
 </div>
 <div id="toast"></div>
 
-<!-- EXCEL MODAL -->
-<div id="excel-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:400;align-items:center;justify-content:center;backdrop-filter:blur(4px)">
-  <div class="mbox" style="max-width:380px">
-    <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:900;color:var(--org);margin-bottom:6px">⬇ Export Excel</div>
-    <div style="font-size:11px;color:var(--txt3);margin-bottom:16px">3 sheets: Raw data · By Person · By Project</div>
-    <label class="flbl">Period</label>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">
-      <button class="period-btn active" data-period="today" onclick="selectPeriod(this)">Today</button>
-      <button class="period-btn" data-period="week" onclick="selectPeriod(this)">This Week</button>
-      <button class="period-btn" data-period="month" onclick="selectPeriod(this)">This Month</button>
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="document.getElementById('excel-modal').style.display='none'">Cancel</button>
-      <button class="btn btn-org" style="flex:2;justify-content:center" onclick="runExport()">⬇ Download</button>
-    </div>
+
   </div>
 </div>
 
@@ -844,47 +834,7 @@ function addManager(){const name=document.getElementById("new-mgr-n").value.trim
 function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",JSON.stringify(m));renderMgrList();}
 
 // ── EXPORT ────────────────────────────────────────────────────────────────────
-let _excelPeriod = "today";
 
-function openExcelModal(){
-  _excelPeriod = "today";
-  const modal = document.getElementById("excel-modal");
-  modal.style.display = "flex";
-
-  // Reset buttons
-  ["today","week","month"].forEach(p => {
-    const btn = document.getElementById("pb-"+p);
-    if(!btn) return;
-    btn.style.background = p==="today" ? "rgba(247,162,0,.15)" : "#161A28";
-    btn.style.borderColor = p==="today" ? "#F7A200" : "#1E2235";
-    btn.style.color = p==="today" ? "#F7A200" : "#94A3B8";
-  });
-
-  // Wire up buttons fresh each time
-  ["today","week","month"].forEach(p => {
-    const btn = document.getElementById("pb-"+p);
-    if(!btn) return;
-    btn.onclick = function(){
-      _excelPeriod = p;
-      ["today","week","month"].forEach(pp => {
-        const b = document.getElementById("pb-"+pp);
-        if(!b) return;
-        b.style.background = pp===p ? "rgba(247,162,0,.15)" : "#161A28";
-        b.style.borderColor = pp===p ? "#F7A200" : "#1E2235";
-        b.style.color = pp===p ? "#F7A200" : "#94A3B8";
-      });
-    };
-  });
-
-  document.getElementById("excel-cancel").onclick = function(){
-    modal.style.display = "none";
-  };
-
-  document.getElementById("excel-download").onclick = function(){
-    modal.style.display = "none";
-    exportExcelOpt(_excelPeriod);
-  };
-}
 
 async function exportExcelOpt(period){
   const today=new Date().toISOString().split("T")[0];
