@@ -95,10 +95,7 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
 #toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%) translateY(16px);border-radius:10px;padding:9px 18px;font-size:12px;font-weight:600;opacity:0;transition:all .25s;pointer-events:none;z-index:999;white-space:nowrap;box-shadow:var(--shadow-md)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #gbar{height:3px;background:var(--bdr)}
-.theme-toggle{width:34px;height:20px;border-radius:10px;background:var(--bdr);border:none;cursor:pointer;position:relative;transition:background .2s;flex-shrink:0}
-.theme-toggle::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--sur);transition:transform .2s;box-shadow:var(--shadow)}
-[data-theme="dark"] .theme-toggle{background:var(--org)}
-[data-theme="dark"] .theme-toggle::after{transform:translateX(14px)}
+
 #gbf{height:100%;width:0%;background:linear-gradient(90deg,var(--org),var(--od));transition:width .5s}
 </style>
 </head>
@@ -120,7 +117,6 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
           <div style="font-size:9px;color:var(--org);letter-spacing:1px;margin-top:2px">MANAGER VIEW</div>
         </div>
       </div>
-      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark"><span class="sun">☀️</span><span class="moon">🌙</span></button>
     </div>
     <label class="flbl">Name</label>
     <input class="finp" id="ln" placeholder="e.g. Luis" style="margin-bottom:10px" onkeydown="if(event.key==='Enter')doLogin()"/>
@@ -164,7 +160,6 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
       <button class="btn btn-org btn-sm" style="font-size:10px;background:rgba(247,162,0,.15);color:#F7A200;box-shadow:none;border:1px solid rgba(247,162,0,.3)" onclick="exportExcelOpt('week')">Week</button>
       <button class="btn btn-org btn-sm" style="font-size:10px;background:rgba(247,162,0,.15);color:#F7A200;box-shadow:none;border:1px solid rgba(247,162,0,.3)" onclick="exportExcelOpt('month')">Month</button>
     </div>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme"></button>
     <button class="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode"><span class="sun">☀️</span><span class="moon">🌙</span></button>
     <button class="btn btn-ghost btn-sm" onclick="doLogout()">↩ Logout</button>
   </div>
