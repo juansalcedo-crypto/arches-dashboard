@@ -923,8 +923,9 @@ async function exportExcelOpt(period){
     const d2=Object.values(byP)
       .sort((a,b)=>{const aa=a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length;const bb=b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length;return bb-aa;})
       .map(p=>[str(p.name),str(p.team),num(p.days.size),
-        str(Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length))+"%",
-        p.db,p.li,p.exp,p.cc,p.conn,p.im,p.em,p.sms,p.co,p.pr,p.is,p.id,p.ot]);
+        num(Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length))+"%",
+        num(p.db),num(p.li),num(p.exp),num(p.cc),num(p.conn),num(p.im),
+        num(p.em),num(p.sms),num(p.co),num(p.pr),num(p.is),num(p.id),num(p.ot)]);
     const ws2=XLSX.utils.aoa_to_sheet([h2,...d2]);
     ws2["!cols"]=[18,12,10,10,8,8,8,8,8,8,8,8,8,8,8,8,8].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,"By Person",ws2);
@@ -946,7 +947,8 @@ async function exportExcelOpt(period){
       "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other"];
     const d3=Object.values(byPj).map(p=>[
       str(p.code),str(p.name),str(p.team),[...p.people].join(", "),
-      p.db,p.li,p.exp,p.cc,p.conn,p.im,p.em,p.sms,p.co,p.pr,p.is,p.id,p.ot]);
+      num(p.db),num(p.li),num(p.exp),num(p.cc),num(p.conn),num(p.im),
+      num(p.em),num(p.sms),num(p.co),num(p.pr),num(p.is),num(p.id),num(p.ot)]);
     const ws3=XLSX.utils.aoa_to_sheet([h3,...d3]);
     ws3["!cols"]=[30,24,10,20,8,8,8,8,8,8,8,8,8,8,8,8,8].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,"By Project",ws3);
