@@ -900,7 +900,13 @@ async function exportExcelOpt(period){
       num(r.company_call), num(r.proposals), num(r.int_sched), num(r.int_done),
       num(r.other), num(r.actions_done), str(r.pct)+"%"
     ]);
-    const ws1=XLSX.utils.aoa_to_sheet([h1,...d1]);
+    // Validate every cell - XLSX needs strings or numbers only
+    const safeD1=d1.map(row=>row.map(cell=>{
+      if(cell===null||cell===undefined)return"";
+      if(typeof cell==="string"||typeof cell==="number"||typeof cell==="boolean")return cell;
+      return""; // kill any object/array
+    }));
+    const ws1=XLSX.utils.aoa_to_sheet([h1,...safeD1]);
     ws1["!cols"]=[32,18,10,32,26,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,10].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,"Raw Data",ws1);
 
@@ -926,7 +932,12 @@ async function exportExcelOpt(period){
         num(Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length))+"%",
         num(p.db),num(p.li),num(p.exp),num(p.cc),num(p.conn),num(p.im),
         num(p.em),num(p.sms),num(p.co),num(p.pr),num(p.is),num(p.id),num(p.ot)]);
-    const ws2=XLSX.utils.aoa_to_sheet([h2,...d2]);
+    const safeD2=d2.map(row=>row.map(cell=>{
+      if(cell===null||cell===undefined)return"";
+      if(typeof cell==="string"||typeof cell==="number"||typeof cell==="boolean")return cell;
+      return"";
+    }));
+    const ws2=XLSX.utils.aoa_to_sheet([h2,...safeD2]);
     ws2["!cols"]=[18,12,10,10,8,8,8,8,8,8,8,8,8,8,8,8,8].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,"By Person",ws2);
 
@@ -949,7 +960,12 @@ async function exportExcelOpt(period){
       str(p.code),str(p.name),str(p.team),[...p.people].join(", "),
       num(p.db),num(p.li),num(p.exp),num(p.cc),num(p.conn),num(p.im),
       num(p.em),num(p.sms),num(p.co),num(p.pr),num(p.is),num(p.id),num(p.ot)]);
-    const ws3=XLSX.utils.aoa_to_sheet([h3,...d3]);
+    const safeD3=d3.map(row=>row.map(cell=>{
+      if(cell===null||cell===undefined)return"";
+      if(typeof cell==="string"||typeof cell==="number"||typeof cell==="boolean")return cell;
+      return"";
+    }));
+    const ws3=XLSX.utils.aoa_to_sheet([h3,...safeD3]);
     ws3["!cols"]=[30,24,10,20,8,8,8,8,8,8,8,8,8,8,8,8,8].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,"By Project",ws3);
 
