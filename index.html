@@ -6,7 +6,7 @@
 <title>Arches Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <style>
 :root{
   --bg:#F8F9FC;--sur:#FFFFFF;--sur2:#F1F3F8;--bdr:#E2E6EF;
@@ -870,106 +870,219 @@ async function exportExcelOpt(period){
       const from=new Date();
       if(period==="week") from.setDate(from.getDate()-7);
       else from.setDate(1);
-      const fromStr=from.toISOString().split("T")[0];
-      const{data}=await db.from("daily_logs").select("*").gte("date",fromStr).lte("date",today).order("date",{ascending:false});
+      const{data}=await db.from("daily_logs").select("*")
+        .gte("date",from.toISOString().split("T")[0]).lte("date",today)
+        .order("date",{ascending:false});
       rows=data||[];
       sheetTitle=period==="week"?"Week":"Month";
     }
     if(rows.length===0){showToast("No data for this period","error");return;}
     showToast("Building Excel...","info");
 
-    // Force every value to be a safe primitive
-    function s(v){
-      if(v===null||v===undefined)return"";
-      if(typeof v==="object")return"";
-      return String(v);
-    }
-    function n(v){
-      const x=parseFloat(v);
-      return isNaN(x)?0:x;
-    }
+    function sv(v){if(v===null||v===undefined||typeof v==="object")return"";return String(v);}
+    function nv(v){const x=parseFloat(v);return isNaN(x)?0:x;}
 
-    // Build raw rows - explicit columns only, no spreads
-    const data1=[
-      ["Date","Person","Team","Project Code","Project Name","Priority",
-       "DB Search","LI Search","Expansion","Cold Call","Connections","InMail",
-       "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other",
-       "Actions Done","% Complete"]
-    ];
-    rows.forEach(r=>{
-      data1.push([
-        s(r.date), s(r.person), s(r.team_id),
-        s(r.project), s(dispName(r.project||"")), s(r.priority),
-        n(r.db_search), n(r.li_search), n(r.expansion), n(r.cold_call),
-        n(r.connections), n(r.inmail), n(r.emails), n(r.sms),
-        n(r.company_call), n(r.proposals), n(r.int_sched), n(r.int_done),
-        n(r.other), n(r.actions_done), n(r.pct)+"%"
-      ]);
-    });
+    const wb=new ExcelJS.Workbook();
+    wb.creator="Arches Dashboard";wb.created=new Date();
 
-    // Build by-person rows
-    const people={};
-    rows.forEach(r=>{
-      const k=s(r.person);if(!k)return;
-      if(!people[k])people[k]={name:k,team:s(r.team_id),days:new Set(),pcts:[],
-        db:0,li:0,exp:0,cc:0,conn:0,im:0,em:0,sms2:0,co:0,pr:0,is:0,id:0,ot:0};
-      people[k].days.add(s(r.date));
-      people[k].pcts.push(n(r.pct));
-      people[k].db+=n(r.db_search); people[k].li+=n(r.li_search);
-      people[k].exp+=n(r.expansion); people[k].cc+=n(r.cold_call);
-      people[k].conn+=n(r.connections); people[k].im+=n(r.inmail);
-      people[k].em+=n(r.emails); people[k].sms2+=n(r.sms);
-      people[k].co+=n(r.company_call); people[k].pr+=n(r.proposals);
-      people[k].is+=n(r.int_sched); people[k].id+=n(r.int_done);
-      people[k].ot+=n(r.other);
-    });
-    const data2=[["Person","Team","Days Active","Avg %",
-      "DB Search","LI Search","Expansion","Cold Call","Connections","InMail",
-      "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other"]];
-    Object.values(people)
-      .sort((a,b)=>{
-        const aa=a.pcts.length?a.pcts.reduce((x,y)=>x+y,0)/a.pcts.length:0;
-        const bb=b.pcts.length?b.pcts.reduce((x,y)=>x+y,0)/b.pcts.length:0;
-        return bb-aa;
-      })
-      .forEach(p=>{
-        const avg=p.pcts.length?Math.round(p.pcts.reduce((x,y)=>x+y,0)/p.pcts.length):0;
-        data2.push([s(p.name),s(p.team),p.days.size,avg+"%",
-          p.db,p.li,p.exp,p.cc,p.conn,p.im,p.em,p.sms2,p.co,p.pr,p.is,p.id,p.ot]);
+    // ── COLORS ──────────────────────────────────────────────────────────────
+    const ORG="FFE07000", ORG_LT="FFFFF3E0", GRN="FF16A34A", GRN_LT="FFF0FDF4",
+          YLW="FFCA8A04", YLW_LT="FFFEFCE8", RED="FFDC2626", RED_LT="FFFEF2F2",
+          BLU="FF2563EB", BLU_LT="FFEFF6FF",
+          HDR_BG="FF1E2235", HDR_FG="FFF1F5F9",
+          ROW1="FFF8F9FC", ROW2="FFFFFFFF",
+          GRAY="FF94A3B8";
+
+    function hdrStyle(bg,fg){
+      return{
+        font:{bold:true,color:{argb:fg||HDR_FG},size:10},
+        fill:{type:"pattern",pattern:"solid",fgColor:{argb:bg||HDR_BG}},
+        alignment:{horizontal:"center",vertical:"middle"},
+        border:{bottom:{style:"medium",color:{argb:ORG}}}
+      };
+    }
+    function cellStyle(bg,fg,bold){
+      return{
+        font:{color:{argb:fg||"FF0F172A"},size:10,bold:bold||false},
+        fill:{type:"pattern",pattern:"solid",fgColor:{argb:bg||ROW1}},
+        alignment:{vertical:"middle"},
+        border:{bottom:{style:"thin",color:{argb:"FFE2E6EF"}}}
+      };
+    }
+    function pctColor(pct){
+      if(pct>=80)return{bg:GRN_LT,fg:GRN};
+      if(pct>=50)return{bg:YLW_LT,fg:YLW};
+      return{bg:RED_LT,fg:RED};
+    }
+    function numColor(v,target){
+      if(v>=target)return{bg:GRN_LT,fg:GRN};
+      if(v>0)return{bg:YLW_LT,fg:YLW};
+      return{bg:ROW1,fg:GRAY};
+    }
+    function applyRow(ws,rowNum,values,styles){
+      const row=ws.getRow(rowNum);
+      values.forEach((val,i)=>{
+        const cell=row.getCell(i+1);
+        cell.value=val;
+        if(styles&&styles[i])Object.assign(cell,styles[i]);
       });
+      row.height=20;
+      row.commit();
+    }
 
-    // Build by-project rows
-    const projects={};
+    const TARGETS=getTgts();
+    const ACOLS=["db_search","li_search","expansion","cold_call","connections",
+      "inmail","emails","sms","company_call","proposals","int_sched","int_done","other"];
+
+    // ── SHEET 1: RAW DATA ────────────────────────────────────────────────────
+    const ws1=wb.addWorksheet("Raw Data");
+    const h1=["Date","Person","Team","Project Code","Project Name","Priority",
+      "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other","Done","%"];
+    ws1.columns=[
+      {width:12},{width:18},{width:10},{width:32},{width:24},{width:8},
+      ...Array(13).fill({width:7}),{width:8},{width:8}
+    ];
+    // Header row
+    const hRow1=ws1.getRow(1);
+    h1.forEach((v,i)=>{
+      const c=hRow1.getCell(i+1);
+      c.value=v;
+      Object.assign(c,hdrStyle());
+    });
+    hRow1.height=22;hRow1.commit();
+    // Data rows
+    rows.forEach((r,ri)=>{
+      const isEven=ri%2===0;
+      const rowBg=isEven?ROW1:ROW2;
+      const p=nv(r.pct);
+      const pc=pctColor(p);
+      const row=ws1.getRow(ri+2);
+      row.height=18;
+      const vals=[sv(r.date),sv(r.person),sv(r.team_id),sv(r.project),sv(dispName(r.project||"")),sv(r.priority),
+        ...ACOLS.map(a=>nv(r[a])),nv(r.actions_done),p+"%"];
+      vals.forEach((val,i)=>{
+        const c=row.getCell(i+1);
+        c.value=val;
+        c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
+        c.font={size:10,color:{argb:"FF0F172A"}};
+        c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
+        c.alignment={vertical:"middle"};
+        // Color % column
+        if(i===20){c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc.bg}};c.font={bold:true,size:10,color:{argb:pc.fg}};}
+        // Color priority
+        if(i===5){
+          const pcolors={P1:{bg:RED_LT,fg:RED},P2:{bg:ORG_LT,fg:ORG},P3:{bg:GRN_LT,fg:GRN}};
+          const pc2=pcolors[val]||{bg:rowBg,fg:"FF0F172A"};
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc2.bg}};
+          c.font={bold:true,size:10,color:{argb:pc2.fg}};
+        }
+        // Color action numbers
+        if(i>=6&&i<=18){
+          const aId=ACOLS[i-6];
+          const tgt=TARGETS[aId]||1;
+          const nc=numColor(nv(val),tgt);
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
+          c.font={size:10,color:{argb:nc.fg}};
+        }
+      });
+      row.commit();
+    });
+
+    // ── SHEET 2: BY PERSON ───────────────────────────────────────────────────
+    const ws2=wb.addWorksheet("By Person");
+    const h2=["#","Person","Team","Days","Avg %",
+      "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other"];
+    ws2.columns=[{width:4},{width:20},{width:12},{width:8},{width:10},
+      ...Array(13).fill({width:8})];
+    const hRow2=ws2.getRow(1);
+    h2.forEach((v,i)=>{const c=hRow2.getCell(i+1);c.value=v;Object.assign(c,hdrStyle());});
+    hRow2.height=22;hRow2.commit();
+
+    // Aggregate by person
+    const byP={};
     rows.forEach(r=>{
-      const k=s(r.project);if(!k)return;
-      if(!projects[k])projects[k]={code:k,name:s(dispName(k)),team:s(r.team_id),people:new Set(),
-        db:0,li:0,exp:0,cc:0,conn:0,im:0,em:0,sms2:0,co:0,pr:0,is:0,id:0,ot:0};
-      projects[k].people.add(s(r.person));
-      projects[k].db+=n(r.db_search); projects[k].li+=n(r.li_search);
-      projects[k].exp+=n(r.expansion); projects[k].cc+=n(r.cold_call);
-      projects[k].conn+=n(r.connections); projects[k].im+=n(r.inmail);
-      projects[k].em+=n(r.emails); projects[k].sms2+=n(r.sms);
-      projects[k].co+=n(r.company_call); projects[k].pr+=n(r.proposals);
-      projects[k].is+=n(r.int_sched); projects[k].id+=n(r.int_done);
-      projects[k].ot+=n(r.other);
+      const k=sv(r.person);if(!k)return;
+      if(!byP[k])byP[k]={name:k,team:sv(r.team_id),days:new Set(),pcts:[],totals:{}};
+      byP[k].days.add(sv(r.date));byP[k].pcts.push(nv(r.pct));
+      ACOLS.forEach(a=>{byP[k].totals[a]=(byP[k].totals[a]||0)+nv(r[a]);});
     });
-    const data3=[["Project Code","Project Name","Team","People Working",
-      "DB Search","LI Search","Expansion","Cold Call","Connections","InMail",
-      "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other"]];
-    Object.values(projects).forEach(p=>{
-      data3.push([s(p.code),s(p.name),s(p.team),[...p.people].join(", "),
-        p.db,p.li,p.exp,p.cc,p.conn,p.im,p.em,p.sms2,p.co,p.pr,p.is,p.id,p.ot]);
+    const sortedP=Object.values(byP).sort((a,b)=>{
+      const aa=a.pcts.length?a.pcts.reduce((x,y)=>x+y,0)/a.pcts.length:0;
+      const bb=b.pcts.length?b.pcts.reduce((x,y)=>x+y,0)/b.pcts.length:0;
+      return bb-aa;
+    });
+    const medals=["🥇","🥈","🥉"];
+    sortedP.forEach((p,ri)=>{
+      const avg=p.pcts.length?Math.round(p.pcts.reduce((x,y)=>x+y,0)/p.pcts.length):0;
+      const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
+      const pc=pctColor(avg);
+      const row=ws2.getRow(ri+2);row.height=20;
+      const medal=medals[ri]||String(ri+1);
+      const vals=[medal,p.name,p.team,p.days.size,avg+"%",
+        ...ACOLS.map(a=>p.totals[a]||0)];
+      vals.forEach((val,i)=>{
+        const c=row.getCell(i+1);c.value=val;
+        c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
+        c.font={size:10,color:{argb:"FF0F172A"}};
+        c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
+        c.alignment={vertical:"middle"};
+        if(i===1){c.font={bold:true,size:11,color:{argb:ORG}};}
+        if(i===4){c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc.bg}};c.font={bold:true,size:11,color:{argb:pc.fg}};}
+        if(i>=5){
+          const aId=ACOLS[i-5];const tgt=TARGETS[aId]||1;
+          const nc=numColor(nv(val),tgt);
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
+          c.font={size:10,color:{argb:nc.fg}};
+        }
+      });
+      // Orange left border for top 3
+      if(ri<3){row.getCell(1).border={left:{style:"medium",color:{argb:ORG}},bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};}
+      row.commit();
     });
 
-    // Write workbook
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data1), "Raw Data");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data2), "By Person");
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(data3), "By Project");
+    // ── SHEET 3: BY PROJECT ──────────────────────────────────────────────────
+    const ws3=wb.addWorksheet("By Project");
+    const h3=["Project Code","Project Name","Team","People Working",
+      "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other"];
+    ws3.columns=[{width:32},{width:26},{width:10},{width:20},
+      ...Array(13).fill({width:8})];
+    const hRow3=ws3.getRow(1);
+    h3.forEach((v,i)=>{const c=hRow3.getCell(i+1);c.value=v;Object.assign(c,hdrStyle());});
+    hRow3.height=22;hRow3.commit();
 
+    const byPj={};
+    rows.forEach(r=>{
+      const k=sv(r.project);if(!k)return;
+      if(!byPj[k])byPj[k]={code:k,name:sv(dispName(k)),team:sv(r.team_id),people:new Set(),totals:{}};
+      byPj[k].people.add(sv(r.person));
+      ACOLS.forEach(a=>{byPj[k].totals[a]=(byPj[k].totals[a]||0)+nv(r[a]);});
+    });
+    Object.values(byPj).forEach((p,ri)=>{
+      const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
+      const row=ws3.getRow(ri+2);row.height=20;
+      const vals=[p.code,p.name,p.team,[...p.people].join(", "),
+        ...ACOLS.map(a=>p.totals[a]||0)];
+      vals.forEach((val,i)=>{
+        const c=row.getCell(i+1);c.value=val;
+        c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
+        c.font={size:10,color:{argb:"FF0F172A"}};
+        c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
+        c.alignment={vertical:"middle"};
+        if(i===1){c.font={bold:true,size:10,color:{argb:BLU}};}
+        if(i>=4){
+          const aId=ACOLS[i-4];const tgt=TARGETS[aId]||1;
+          const nc=numColor(nv(val),tgt);
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
+          c.font={size:10,color:{argb:nc.fg}};
+        }
+      });
+      row.commit();
+    });
+
+    // ── DOWNLOAD ─────────────────────────────────────────────────────────────
     const fname="arches-"+sheetTitle.toLowerCase()+"-"+today+".xlsx";
-    const out=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-    const blob=new Blob([out],{type:"application/octet-stream"});
+    const buf=await wb.xlsx.writeBuffer();
+    const blob=new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
     a.href=url;a.download=fname;
