@@ -861,86 +861,111 @@ function removeMgr(i){const m=getMgrs();m.splice(i,1);localStorage.setItem("am",
 
 
 async function exportExcelOpt(period){
-  const today=new Date().toISOString().split("T")[0];
-  let rows=[], dateLabel=today, sheetTitle="Today";
+  try{
+    const today=new Date().toISOString().split("T")[0];
+    let rows=[], sheetTitle="Today";
 
-  if(period==="today"){
-    rows=todayLogs;
-  } else {
-    const from=new Date();
-    if(period==="week") from.setDate(from.getDate()-7);
-    else { from.setDate(1); } // first of month
-    const fromStr=from.toISOString().split("T")[0];
-    const{data}=await db.from("daily_logs").select("*").gte("date",fromStr).lte("date",today).order("date",{ascending:false});
-    rows=data||[];
-    sheetTitle=period==="week"?"This Week":"This Month";
-    dateLabel=period;
-  }
+    if(period==="today"){
+      rows=todayLogs||[];
+    } else {
+      const from=new Date();
+      if(period==="week") from.setDate(from.getDate()-7);
+      else from.setDate(1);
+      const fromStr=from.toISOString().split("T")[0];
+      const{data}=await db.from("daily_logs").select("*").gte("date",fromStr).lte("date",today).order("date",{ascending:false});
+      rows=data||[];
+      sheetTitle=period==="week"?"This Week":"This Month";
+    }
 
-  if(rows.length===0){showToast("⚠️ No data for this period","error");return;}
+    if(!rows||rows.length===0){showToast("No data for this period","error");return;}
+    showToast("Building Excel...","info");
 
-  const wb=XLSX.utils.book_new();
+    // Safe value helpers
+    const str=(v)=>{if(v==null)return"";if(typeof v==="object")return"";return String(v);};
+    const num=(v)=>{const n=Number(v);return isNaN(n)?0:n;};
+    const pct=(v)=>{const n=Number(v);return isNaN(n)?"0%":n+"%";};
 
-  // ── Sheet 1: Raw Data ──────────────────────────────────────────────────────
-  const h1=["Date","Person","Team","Project Code","Project Name","Priority",
-    ...ACTIONS.map(a=>a.name),"Actions Done","% Complete"];
-  const d1=rows.map(r=>[
-    String(r.date||""), String(r.person||""), String(r.team_id||""),
-    String(r.project||""), String(dispName(r.project||"")), String(r.priority||""),
-    ...ACTIONS.map(a=>Number(r[a.id]||0)),
-    Number(r.actions_done||0), String(r.pct||0)+"%"
-  ]);
-  const ws1=XLSX.utils.aoa_to_sheet([h1,...d1]);
-  ws1["!cols"]=h1.map((_,i)=>({wch:i===3?32:i===4?26:i<6?14:9}));
-  XLSX.utils.book_append_sheet(wb,"Raw Data",ws1);
+    const wb=XLSX.utils.book_new();
 
-  // ── Sheet 2: By Person ─────────────────────────────────────────────────────
-  const byP={};
-  rows.forEach(r=>{
-    if(!byP[r.person])byP[r.person]={name:r.person,team:r.team_id||memTeam(r.person)||"",days:new Set(),pcts:[],totals:{}};
-    byP[r.person].days.add(r.date);
-    byP[r.person].pcts.push(r.pct);
-    ACTIONS.forEach(a=>{byP[r.person].totals[a.id]=(byP[r.person].totals[a.id]||0)+(r[a.id]||0);});
-  });
-  const h2=["Person","Team","Days Active","Avg %",...ACTIONS.map(a=>a.name)];
-  const d2=Object.values(byP)
-    .sort((a,b)=>(b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length)-(a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length))
-    .map(p=>[
-      String(p.name||""), String(p.team||""), Number(p.days.size||0),
-      String(Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length))+"%",
-      ...ACTIONS.map(a=>Number(p.totals[a.id]||0))
+    // Sheet 1: Raw Data
+    const h1=["Date","Person","Team","Project Code","Project Name","Priority",
+      "DB Search","LI Search","Expansion","Cold Call","Connections","InMail",
+      "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other",
+      "Actions Done","% Complete"];
+    const d1=rows.map(r=>[
+      str(r.date), str(r.person), str(r.team_id),
+      str(r.project), str(dispName(r.project)), str(r.priority),
+      num(r.db_search), num(r.li_search), num(r.expansion), num(r.cold_call),
+      num(r.connections), num(r.inmail), num(r.emails), num(r.sms),
+      num(r.company_call), num(r.proposals), num(r.int_sched), num(r.int_done),
+      num(r.other), num(r.actions_done), str(r.pct)+"%"
     ]);
-  const ws2=XLSX.utils.aoa_to_sheet([h2,...d2]);
-  ws2["!cols"]=h2.map((_,i)=>({wch:i<2?18:i<4?12:9}));
-  XLSX.utils.book_append_sheet(wb,"By Person",ws2);
+    const ws1=XLSX.utils.aoa_to_sheet([h1,...d1]);
+    ws1["!cols"]=[32,18,10,32,26,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,10].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,"Raw Data",ws1);
 
-  // ── Sheet 3: By Project ────────────────────────────────────────────────────
-  const byProj={};
-  rows.forEach(r=>{
-    if(!byProj[r.project])byProj[r.project]={code:r.project,name:dispName(r.project),team:r.team_id||"",people:new Set(),totals:{}};
-    byProj[r.project].people.add(r.person);
-    ACTIONS.forEach(a=>{byProj[r.project].totals[a.id]=(byProj[r.project].totals[a.id]||0)+(r[a.id]||0);});
-  });
-  const h3=["Project Code","Project Name","Team","People Working",...ACTIONS.map(a=>a.name)];
-  const d3=Object.values(byProj).map(p=>[
-    String(p.code||""), String(p.name||""), String(p.team||""), [...p.people].join(", "),
-    ...ACTIONS.map(a=>Number(p.totals[a.id]||0))
-  ]);
-  const ws3=XLSX.utils.aoa_to_sheet([h3,...d3]);
-  ws3["!cols"]=h3.map((_,i)=>({wch:i===0?32:i===1?26:i===3?22:9}));
-  XLSX.utils.book_append_sheet(wb,"By Project",ws3);
+    // Sheet 2: By Person
+    const byP={};
+    rows.forEach(r=>{
+      const k=str(r.person);if(!k)return;
+      if(!byP[k])byP[k]={name:k,team:str(r.team_id)||str(memTeam(k)),days:new Set(),pcts:[],
+        db:0,li:0,exp:0,cc:0,conn:0,im:0,em:0,sms:0,co:0,pr:0,is:0,id:0,ot:0};
+      byP[k].days.add(str(r.date));
+      byP[k].pcts.push(num(r.pct));
+      byP[k].db+=num(r.db_search);byP[k].li+=num(r.li_search);byP[k].exp+=num(r.expansion);
+      byP[k].cc+=num(r.cold_call);byP[k].conn+=num(r.connections);byP[k].im+=num(r.inmail);
+      byP[k].em+=num(r.emails);byP[k].sms+=num(r.sms);byP[k].co+=num(r.company_call);
+      byP[k].pr+=num(r.proposals);byP[k].is+=num(r.int_sched);byP[k].id+=num(r.int_done);byP[k].ot+=num(r.other);
+    });
+    const h2=["Person","Team","Days Active","Avg %",
+      "DB Search","LI Search","Expansion","Cold Call","Connections","InMail",
+      "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other"];
+    const d2=Object.values(byP)
+      .sort((a,b)=>{const aa=a.pcts.reduce((s,x)=>s+x,0)/a.pcts.length;const bb=b.pcts.reduce((s,x)=>s+x,0)/b.pcts.length;return bb-aa;})
+      .map(p=>[str(p.name),str(p.team),num(p.days.size),
+        str(Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length))+"%",
+        p.db,p.li,p.exp,p.cc,p.conn,p.im,p.em,p.sms,p.co,p.pr,p.is,p.id,p.ot]);
+    const ws2=XLSX.utils.aoa_to_sheet([h2,...d2]);
+    ws2["!cols"]=[18,12,10,10,8,8,8,8,8,8,8,8,8,8,8,8,8].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,"By Person",ws2);
 
-  // Force download via blob link
-  const fname="arches-"+sheetTitle.replace(/ /g,"-").toLowerCase()+"-"+today+".xlsx";
-  const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
-  const blob=new Blob([wbout],{type:"application/octet-stream"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url; a.download=fname;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a);
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-  showToast(`✅ ${fname} downloaded!`,"success");
+    // Sheet 3: By Project
+    const byPj={};
+    rows.forEach(r=>{
+      const k=str(r.project);if(!k)return;
+      if(!byPj[k])byPj[k]={code:k,name:str(dispName(k)),team:str(r.team_id),people:new Set(),
+        db:0,li:0,exp:0,cc:0,conn:0,im:0,em:0,sms:0,co:0,pr:0,is:0,id:0,ot:0};
+      byPj[k].people.add(str(r.person));
+      byPj[k].db+=num(r.db_search);byPj[k].li+=num(r.li_search);byPj[k].exp+=num(r.expansion);
+      byPj[k].cc+=num(r.cold_call);byPj[k].conn+=num(r.connections);byPj[k].im+=num(r.inmail);
+      byPj[k].em+=num(r.emails);byPj[k].sms+=num(r.sms);byPj[k].co+=num(r.company_call);
+      byPj[k].pr+=num(r.proposals);byPj[k].is+=num(r.int_sched);byPj[k].id+=num(r.int_done);byPj[k].ot+=num(r.other);
+    });
+    const h3=["Project Code","Project Name","Team","People Working",
+      "DB Search","LI Search","Expansion","Cold Call","Connections","InMail",
+      "Emails","SMS","Company Call","Proposals","Int Scheduled","Int Done","Other"];
+    const d3=Object.values(byPj).map(p=>[
+      str(p.code),str(p.name),str(p.team),[...p.people].join(", "),
+      p.db,p.li,p.exp,p.cc,p.conn,p.im,p.em,p.sms,p.co,p.pr,p.is,p.id,p.ot]);
+    const ws3=XLSX.utils.aoa_to_sheet([h3,...d3]);
+    ws3["!cols"]=[30,24,10,20,8,8,8,8,8,8,8,8,8,8,8,8,8].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb,"By Project",ws3);
+
+    // Download
+    const fname="arches-"+sheetTitle.replace(/ /g,"-").toLowerCase()+"-"+today+".xlsx";
+    const wbout=XLSX.write(wb,{bookType:"xlsx",type:"array"});
+    const blob=new Blob([wbout],{type:"application/octet-stream"});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement("a");
+    link.href=url;link.download=fname;
+    document.body.appendChild(link);link.click();
+    document.body.removeChild(link);
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    showToast("✅ "+fname+" downloaded!","success");
+  }catch(err){
+    console.error("Excel error:",err);
+    showToast("⚠️ Excel error: "+err.message,"error");
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
