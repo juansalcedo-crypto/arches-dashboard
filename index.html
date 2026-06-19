@@ -971,6 +971,68 @@ async function exportExcelOpt(period){
     const ACOLS=["db_search","li_search","expansion","cold_call","connections",
       "inmail","emails","sms","company_call","proposals","int_sched","int_done","other"];
 
+    // ── SHEET 0: OVERVIEW (person-day totals, same format as Google Sheet) ───
+    const ws0=wb.addWorksheet("Overview");
+    const h0=["Date","Person","Team",
+      "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other",
+      "Total Actions","Projects","Avg %"];
+    ws0.columns=[{width:12},{width:18},{width:10},
+      ...Array(13).fill({width:8}),{width:13},{width:10},{width:10}];
+    const hRow0=ws0.getRow(1);
+    h0.forEach((v,i)=>{const c=hRow0.getCell(i+1);c.value=v;Object.assign(c,hdrStyle());});
+    hRow0.height=22;hRow0.commit();
+
+    // Group rows by date+person, summing all their projects together
+    const byDayPerson={};
+    rows.forEach(r=>{
+      const key=sv(r.date)+"|"+sv(r.person);
+      if(!byDayPerson[key]){
+        byDayPerson[key]={date:sv(r.date),person:sv(r.person),team:sv(r.team_id),
+          totals:{},pctSum:0,projectCount:0};
+      }
+      const g=byDayPerson[key];
+      ACOLS.forEach(a=>{g.totals[a]=(g.totals[a]||0)+nv(r[a]);});
+      g.pctSum+=nv(r.pct);
+      g.projectCount+=1;
+    });
+
+    const overviewRows=Object.values(byDayPerson).sort((a,b)=>{
+      if(a.date!==b.date) return b.date.localeCompare(a.date);
+      return a.person.localeCompare(b.person);
+    });
+
+    overviewRows.forEach((g,ri)=>{
+      const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
+      const totalActions=ACOLS.reduce((s,a)=>s+(g.totals[a]||0),0);
+      const avgPct=g.projectCount>0?Math.round(g.pctSum/g.projectCount):0;
+      const pc=pctColor(avgPct);
+      const row=ws0.getRow(ri+2);row.height=20;
+      const vals=[g.date,g.person,g.team,
+        ...ACOLS.map(a=>g.totals[a]||0),
+        totalActions,g.projectCount,avgPct+"%"];
+      vals.forEach((val,i)=>{
+        const c=row.getCell(i+1);c.value=val;
+        c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
+        c.font={size:10,color:{argb:"FF0F172A"}};
+        c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
+        c.alignment={vertical:"middle",horizontal:i>=3?"center":"left"};
+        if(i===1){c.font={bold:true,size:10,color:{argb:ORG}};}
+        if(i>=3&&i<=15){
+          const aId=ACOLS[i-3];const tgt=TARGETS[aId]||1;
+          const nc=numColor(nv(val),tgt);
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
+          c.font={size:10,color:{argb:nc.fg},bold:nv(val)>0};
+        }
+        if(i===16){c.font={bold:true,size:10,color:{argb:"FF0F172A"}};}
+        if(i===17){c.font={size:10,color:{argb:"FF475569"}};}
+        if(i===18){
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc.bg}};
+          c.font={bold:true,size:10,color:{argb:pc.fg}};
+        }
+      });
+      row.commit();
+    });
+
     // ── SHEET 1: RAW DATA ────────────────────────────────────────────────────
     const ws1=wb.addWorksheet("Raw Data");
     const h1=["Date","Person","Team","Project Code","Project Name","Priority",
