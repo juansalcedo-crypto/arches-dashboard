@@ -970,68 +970,143 @@ async function exportExcelOpt(period){
     const TARGETS=getTgts();
     const ACOLS=["db_search","li_search","expansion","cold_call","connections",
       "inmail","emails","sms","company_call","proposals","int_sched","int_done","other"];
+    const isMonth=period==="month";
 
-    // ── SHEET 0: OVERVIEW (person-day totals, same format as Google Sheet) ───
+    // ── SHEET 0: OVERVIEW ──────────────────────────────────────────────────
+    // Today/Week: one row per person PER DAY (daily granularity)
+    // Month: one row per person TOTAL for the whole month (no daily rows)
     const ws0=wb.addWorksheet("Overview");
-    const h0=["Date","Person","Team",
-      "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other",
-      "Total Actions","Projects","Avg %"];
-    ws0.columns=[{width:12},{width:18},{width:10},
-      ...Array(13).fill({width:8}),{width:13},{width:10},{width:10}];
-    const hRow0=ws0.getRow(1);
-    h0.forEach((v,i)=>{const c=hRow0.getCell(i+1);c.value=v;Object.assign(c,hdrStyle());});
-    hRow0.height=22;hRow0.commit();
 
-    // Group rows by date+person, summing all their projects together
-    const byDayPerson={};
-    rows.forEach(r=>{
-      const key=sv(r.date)+"|"+sv(r.person);
-      if(!byDayPerson[key]){
-        byDayPerson[key]={date:sv(r.date),person:sv(r.person),team:sv(r.team_id),
-          totals:{},pctSum:0,projectCount:0};
-      }
-      const g=byDayPerson[key];
-      ACOLS.forEach(a=>{g.totals[a]=(g.totals[a]||0)+nv(r[a]);});
-      g.pctSum+=nv(r.pct);
-      g.projectCount+=1;
-    });
+    if(isMonth){
+      // Monthly totals per person - no date column, no daily breakdown
+      const h0=["Person","Team","Days Active",
+        "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other",
+        "Total Actions","Projects","Avg %"];
+      ws0.columns=[{width:20},{width:10},{width:11},
+        ...Array(13).fill({width:8}),{width:13},{width:10},{width:10}];
+      const hRow0=ws0.getRow(1);
+      h0.forEach((v,i)=>{const c=hRow0.getCell(i+1);c.value=v;Object.assign(c,hdrStyle());});
+      hRow0.height=22;hRow0.commit();
 
-    const overviewRows=Object.values(byDayPerson).sort((a,b)=>{
-      if(a.date!==b.date) return b.date.localeCompare(a.date);
-      return a.person.localeCompare(b.person);
-    });
-
-    overviewRows.forEach((g,ri)=>{
-      const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
-      const totalActions=ACOLS.reduce((s,a)=>s+(g.totals[a]||0),0);
-      const avgPct=g.projectCount>0?Math.round(g.pctSum/g.projectCount):0;
-      const pc=pctColor(avgPct);
-      const row=ws0.getRow(ri+2);row.height=20;
-      const vals=[g.date,g.person,g.team,
-        ...ACOLS.map(a=>g.totals[a]||0),
-        totalActions,g.projectCount,avgPct+"%"];
-      vals.forEach((val,i)=>{
-        const c=row.getCell(i+1);c.value=val;
-        c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
-        c.font={size:10,color:{argb:"FF0F172A"}};
-        c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
-        c.alignment={vertical:"middle",horizontal:i>=3?"center":"left"};
-        if(i===1){c.font={bold:true,size:10,color:{argb:ORG}};}
-        if(i>=3&&i<=15){
-          const aId=ACOLS[i-3];const tgt=TARGETS[aId]||1;
-          const nc=numColor(nv(val),tgt);
-          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
-          c.font={size:10,color:{argb:nc.fg},bold:nv(val)>0};
+      const byPerson={};
+      rows.forEach(r=>{
+        const k=sv(r.person);if(!k)return;
+        if(!byPerson[k]){
+          byPerson[k]={name:k,team:sv(r.team_id),days:new Set(),totals:{},pctSum:0,projectCount:0};
         }
-        if(i===16){c.font={bold:true,size:10,color:{argb:"FF0F172A"}};}
-        if(i===17){c.font={size:10,color:{argb:"FF475569"}};}
-        if(i===18){
-          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc.bg}};
-          c.font={bold:true,size:10,color:{argb:pc.fg}};
+        const g=byPerson[k];
+        g.days.add(sv(r.date));
+        ACOLS.forEach(a=>{g.totals[a]=(g.totals[a]||0)+nv(r[a]);});
+        g.pctSum+=nv(r.pct);
+        g.projectCount+=1;
+      });
+
+      const monthRows=Object.values(byPerson).sort((a,b)=>{
+        const aa=a.projectCount>0?a.pctSum/a.projectCount:0;
+        const bb=b.projectCount>0?b.pctSum/b.projectCount:0;
+        return bb-aa;
+      });
+
+      monthRows.forEach((g,ri)=>{
+        const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
+        const totalActions=ACOLS.reduce((s,a)=>s+(g.totals[a]||0),0);
+        const avgPct=g.projectCount>0?Math.round(g.pctSum/g.projectCount):0;
+        const pc=pctColor(avgPct);
+        const row=ws0.getRow(ri+2);row.height=20;
+        const vals=[g.name,g.team,g.days.size,
+          ...ACOLS.map(a=>g.totals[a]||0),
+          totalActions,g.projectCount,avgPct+"%"];
+        vals.forEach((val,i)=>{
+          const c=row.getCell(i+1);c.value=val;
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
+          c.font={size:10,color:{argb:"FF0F172A"}};
+          c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
+          c.alignment={vertical:"middle",horizontal:i>=2?"center":"left"};
+          if(i===0){c.font={bold:true,size:11,color:{argb:ORG}};}
+          if(i===2){c.font={size:10,color:{argb:"FF475569"}};}
+          if(i>=3&&i<=15){
+            const aId=ACOLS[i-3];const tgt=TARGETS[aId]||1;
+            const nc=numColor(nv(val),tgt);
+            c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
+            c.font={size:10,color:{argb:nc.fg},bold:nv(val)>0};
+          }
+          if(i===16){c.font={bold:true,size:10,color:{argb:"FF0F172A"}};}
+          if(i===17){c.font={size:10,color:{argb:"FF475569"}};}
+          if(i===18){
+            c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc.bg}};
+            c.font={bold:true,size:10,color:{argb:pc.fg}};
+          }
+        });
+        row.commit();
+      });
+      // Orange left border for top 3
+      [0,1,2].forEach(ri=>{
+        if(ri<monthRows.length){
+          ws0.getRow(ri+2).getCell(1).border={left:{style:"medium",color:{argb:ORG}},bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
         }
       });
-      row.commit();
-    });
+
+    } else {
+      // Today/Week: daily granularity, one row per person per day
+      const h0=["Date","Person","Team",
+        "DB","LI","Exp","Calls","Conn","InMail","Emails","SMS","Co.Call","Prop","Int.S","Int.D","Other",
+        "Total Actions","Projects","Avg %"];
+      ws0.columns=[{width:12},{width:18},{width:10},
+        ...Array(13).fill({width:8}),{width:13},{width:10},{width:10}];
+      const hRow0=ws0.getRow(1);
+      h0.forEach((v,i)=>{const c=hRow0.getCell(i+1);c.value=v;Object.assign(c,hdrStyle());});
+      hRow0.height=22;hRow0.commit();
+
+      const byDayPerson={};
+      rows.forEach(r=>{
+        const key=sv(r.date)+"|"+sv(r.person);
+        if(!byDayPerson[key]){
+          byDayPerson[key]={date:sv(r.date),person:sv(r.person),team:sv(r.team_id),
+            totals:{},pctSum:0,projectCount:0};
+        }
+        const g=byDayPerson[key];
+        ACOLS.forEach(a=>{g.totals[a]=(g.totals[a]||0)+nv(r[a]);});
+        g.pctSum+=nv(r.pct);
+        g.projectCount+=1;
+      });
+
+      const overviewRows=Object.values(byDayPerson).sort((a,b)=>{
+        if(a.date!==b.date) return b.date.localeCompare(a.date);
+        return a.person.localeCompare(b.person);
+      });
+
+      overviewRows.forEach((g,ri)=>{
+        const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
+        const totalActions=ACOLS.reduce((s,a)=>s+(g.totals[a]||0),0);
+        const avgPct=g.projectCount>0?Math.round(g.pctSum/g.projectCount):0;
+        const pc=pctColor(avgPct);
+        const row=ws0.getRow(ri+2);row.height=20;
+        const vals=[g.date,g.person,g.team,
+          ...ACOLS.map(a=>g.totals[a]||0),
+          totalActions,g.projectCount,avgPct+"%"];
+        vals.forEach((val,i)=>{
+          const c=row.getCell(i+1);c.value=val;
+          c.fill={type:"pattern",pattern:"solid",fgColor:{argb:rowBg}};
+          c.font={size:10,color:{argb:"FF0F172A"}};
+          c.border={bottom:{style:"thin",color:{argb:"FFE2E6EF"}}};
+          c.alignment={vertical:"middle",horizontal:i>=3?"center":"left"};
+          if(i===1){c.font={bold:true,size:10,color:{argb:ORG}};}
+          if(i>=3&&i<=15){
+            const aId=ACOLS[i-3];const tgt=TARGETS[aId]||1;
+            const nc=numColor(nv(val),tgt);
+            c.fill={type:"pattern",pattern:"solid",fgColor:{argb:nc.bg}};
+            c.font={size:10,color:{argb:nc.fg},bold:nv(val)>0};
+          }
+          if(i===16){c.font={bold:true,size:10,color:{argb:"FF0F172A"}};}
+          if(i===17){c.font={size:10,color:{argb:"FF475569"}};}
+          if(i===18){
+            c.fill={type:"pattern",pattern:"solid",fgColor:{argb:pc.bg}};
+            c.font={bold:true,size:10,color:{argb:pc.fg}};
+          }
+        });
+        row.commit();
+      });
+    }
 
     // ── SHEET 1: RAW DATA ────────────────────────────────────────────────────
     const ws1=wb.addWorksheet("Raw Data");
