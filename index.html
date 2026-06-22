@@ -398,21 +398,24 @@ function shortName(name){
 }
 
 const TEAMS={luis:{name:"Luis",emoji:"🟠",color:"#F7A200"},taiki:{name:"Taiki",emoji:"🔵",color:"#3B82F6"}};
+// optional:true → does NOT count toward totals/%, but still displays in tables
+// Per request: only Cold Call → Company Call count toward totals now
 const ACTIONS=[
-  {id:"db_search",emoji:"🗄️",name:"DB Search",target:1},
-  {id:"li_search",emoji:"🔍",name:"LI Search",target:25},
-  {id:"expansion",emoji:"📈",name:"Expansion",target:60},
-  {id:"cold_call",emoji:"📞",name:"Cold Call",target:20},
-  {id:"connections",emoji:"🔗",name:"Connections",target:25},
-  {id:"inmail",emoji:"💼",name:"InMail",target:10},
-  {id:"emails",emoji:"📧",name:"Emails",target:40},
-  {id:"sms",emoji:"💬",name:"SMS",target:15},
-  {id:"company_call",emoji:"🏢",name:"Co.Call",target:1},
-  {id:"proposals",emoji:"🤝",name:"Proposals",target:3},
-  {id:"int_sched",emoji:"🎙️",name:"Int.Sched",target:2},
-  {id:"int_done",emoji:"📅",name:"Int.Done",target:1},
-  {id:"other",emoji:"⚡",name:"Other",target:1},
+  {id:"db_search",emoji:"🗄️",name:"DB Search",target:1,optional:true},
+  {id:"li_search",emoji:"🔍",name:"LI Search",target:25,optional:true},
+  {id:"expansion",emoji:"📈",name:"Expansion",target:60,optional:true},
+  {id:"cold_call",emoji:"📞",name:"Cold Call",target:20,optional:false},
+  {id:"connections",emoji:"🔗",name:"Connections",target:25,optional:false},
+  {id:"inmail",emoji:"💼",name:"InMail",target:10,optional:false},
+  {id:"emails",emoji:"📧",name:"Emails",target:40,optional:false},
+  {id:"sms",emoji:"💬",name:"SMS",target:15,optional:false},
+  {id:"company_call",emoji:"🏢",name:"Co.Call",target:1,optional:false},
+  {id:"proposals",emoji:"🤝",name:"Proposals",target:3,optional:true},
+  {id:"int_sched",emoji:"🎙️",name:"Int.Sched",target:2,optional:true},
+  {id:"int_done",emoji:"📅",name:"Int.Done",target:1,optional:true},
+  {id:"other",emoji:"⚡",name:"Other",target:1,optional:true},
 ];
+const CORE_ACTIONS=ACTIONS.filter(a=>!a.optional);
 
 const DEFAULT_MANAGERS=[{name:"Valentin Alvarez",pass:"Arches5630!"},{name:"Luis",pass:"Arches5630!"},{name:"Taiki",pass:"Arches5630!"},{name:"Admin",pass:"Arches5630!"}];
 // Managers are stored in Supabase so all devices stay in sync
@@ -642,7 +645,7 @@ async function renderPerf(){
       const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
       const color=avg>=80?"var(--grn)":avg>=50?"var(--ylw)":"var(--red)";
       const team=TEAMS[p.team];
-      const monthlyPct=isMonth?Math.round(ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0)/Math.max(1,ACTIONS.reduce((s,a)=>s+(monthTgts[a.id]||1),0))*100):0;
+      const monthlyPct=isMonth?Math.round(CORE_ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0)/Math.max(1,CORE_ACTIONS.reduce((s,a)=>s+(monthTgts[a.id]||1),0))*100):0;
       return`<tr>
         <td style="color:var(--txt3)">${["🥇","🥈","🥉"][i]||i+1}</td>
         <td style="font-weight:600;color:var(--org);cursor:pointer" onclick="showDetail('${p.name}')">${p.name}</td>
@@ -970,6 +973,8 @@ async function exportExcelOpt(period){
     const TARGETS=getTgts();
     const ACOLS=["db_search","li_search","expansion","cold_call","connections",
       "inmail","emails","sms","company_call","proposals","int_sched","int_done","other"];
+    // Only Cold Call → Company Call count toward Total Actions / % — the rest still display as columns
+    const CORE_COLS=["cold_call","connections","inmail","emails","sms","company_call"];
     const isMonth=period==="month";
 
     // ── SHEET 0: OVERVIEW ──────────────────────────────────────────────────
@@ -1009,7 +1014,7 @@ async function exportExcelOpt(period){
 
       monthRows.forEach((g,ri)=>{
         const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
-        const totalActions=ACOLS.reduce((s,a)=>s+(g.totals[a]||0),0);
+        const totalActions=CORE_COLS.reduce((s,a)=>s+(g.totals[a]||0),0);
         const avgPct=g.projectCount>0?Math.round(g.pctSum/g.projectCount):0;
         const pc=pctColor(avgPct);
         const row=ws0.getRow(ri+2);row.height=20;
@@ -1077,7 +1082,7 @@ async function exportExcelOpt(period){
 
       overviewRows.forEach((g,ri)=>{
         const isEven=ri%2===0;const rowBg=isEven?ROW1:ROW2;
-        const totalActions=ACOLS.reduce((s,a)=>s+(g.totals[a]||0),0);
+        const totalActions=CORE_COLS.reduce((s,a)=>s+(g.totals[a]||0),0);
         const avgPct=g.projectCount>0?Math.round(g.pctSum/g.projectCount):0;
         const pc=pctColor(avgPct);
         const row=ws0.getRow(ri+2);row.height=20;
@@ -1441,8 +1446,8 @@ function renderMonthlyBreakdown(rows, tgts){
     const team=TEAMS[p.team];
     const medal=["🥇","🥈","🥉"][i]||"";
     // Overall vs monthly target
-    const totalActions=ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0);
-    const totalTarget=ACTIONS.reduce((s,a)=>s+(mt[a.id]||0),0);
+    const totalActions=CORE_ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0);
+    const totalTarget=CORE_ACTIONS.reduce((s,a)=>s+(mt[a.id]||0),0);
     const overallPct=totalTarget>0?Math.round(totalActions/totalTarget*100):0;
     const color=avg>=80?"var(--grn)":avg>=50?"var(--ylw)":"var(--red)";
     return`<tr>
@@ -1495,8 +1500,8 @@ async function exportMonthlyExcel(){
   const ph=["Person","Team","Days Active","Avg %",...ACTIONS.map(a=>a.name),"Total vs Target"];
   const pd=Object.values(byP).map(p=>{
     const avg=Math.round(p.pcts.reduce((s,x)=>s+x,0)/p.pcts.length);
-    const total=ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0);
-    const tgt=ACTIONS.reduce((s,a)=>s+(tgts[a.id]||0),0);
+    const total=CORE_ACTIONS.reduce((s,a)=>s+(p.totals[a.id]||0),0);
+    const tgt=CORE_ACTIONS.reduce((s,a)=>s+(tgts[a.id]||0),0);
     return[p.name,p.team,p.days.size,avg+"%",...ACTIONS.map(a=>p.totals[a.id]||0),`${total}/${tgt} (${tgt>0?Math.round(total/tgt*100):0}%)`];
   });
   const ws2=XLSX.utils.aoa_to_sheet([ph,...pd]);
