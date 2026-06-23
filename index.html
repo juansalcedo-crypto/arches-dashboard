@@ -342,7 +342,7 @@ input,button,select,textarea{font-family:'Inter',sans-serif;-webkit-font-smoothi
           <div class="ch"><span class="ct">👥 Team Members</span></div>
           <div style="padding:13px">
             <div style="display:flex;gap:7px;margin-bottom:10px">
-              <input class="finp" id="new-mem" placeholder="New member name…" autocomplete="off" name="arches-new-member-field"/>
+              <input class="finp" id="new-mem" placeholder="New member name…" autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true"/>
               <select class="fsel" id="new-mem-team" style="width:110px"><option value="luis">Luis</option><option value="taiki">Taiki</option></select>
               <button class="btn btn-org btn-sm" onclick="addMember()" style="white-space:nowrap">+ Add</button>
             </div>
@@ -1301,7 +1301,7 @@ function showPage(page,btn){
   if(page==="performance")renderPerf();
   if(page==="targets"){buildMonthOptions();loadMonthlyTargets();}
   if(page==="history"){const today=new Date().toISOString().split("T")[0];document.getElementById("hfrom").value=today;document.getElementById("hto").value=today;loadHistory();}
-  if(page==="settings"){renderTgtForm();renderMemList();renderMgrList();}
+  if(page==="settings"){renderTgtForm();renderMemList();renderMgrList();const nm=document.getElementById("new-mem");if(nm){nm.value="";setTimeout(()=>{nm.value="";},50);setTimeout(()=>{nm.value="";},300);}}
   if(page==="assign"){loadAssigned();loadComments();renderPeopleSelector();}
 }
 
