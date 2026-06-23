@@ -865,7 +865,13 @@ async function moveMem(n,from,to){
 async function removeMem(n,team){
   if(!confirm(`Remove ${n} from Team ${team}?`))return;
   // Update Supabase
-  await db.from("members").update({active:false}).eq("name",n).catch(()=>{});
+  try{
+    const{error}=await db.from("members").update({active:false}).eq("name",n);
+    if(error){showToast(`⚠️ DB error: ${error.message}`,"error");return;}
+  }catch(err){
+    showToast(`⚠️ DB error: ${err.message}`,"error");
+    return;
+  }
   // Update localStorage
   const m=getMembers();
   m[team]=(m[team]||[]).filter(x=>x!==n);
@@ -892,7 +898,11 @@ async function removeMgr(i){
   const mgr=m[i];
   if(!mgr)return;
   // Remove from Supabase
-  await db.from("managers").delete().eq("name",mgr.name).catch(()=>{});
+  try{
+    await db.from("managers").delete().eq("name",mgr.name);
+  }catch(err){
+    showToast(`⚠️ DB error: ${err.message}`,"error");
+  }
   m.splice(i,1);localStorage.setItem("am",JSON.stringify(m));
   renderMgrList();
 }
